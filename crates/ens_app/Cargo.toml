@@ -1,0 +1,33 @@
+[package]
+name = "ens_app"
+version = "0.14.0-dev"
+edition = "2021"
+description = "Provides core App functionality for Bevy Engine"
+homepage = "https://bevyengine.org"
+repository = "https://github.com/bevyengine/bevy"
+license = "MIT OR Apache-2.0"
+keywords = ["bevy"]
+
+[features]
+trace = []
+loop_wait = []
+sub_app = []
+default = []
+
+[dependencies]
+# bevy
+ens_derive = { path = "../ens_derive", version = "0.14.0-dev" }
+ens = { path = "../ens", version = "0.14.0-dev", default-features = false }
+ens_utils = { path = "../ens_utils", version = "0.14.0-dev" }
+ens_tasks = { path = "../ens_tasks", version = "0.14.0-dev" }
+
+# other
+serde = { version = "1.0", features = ["derive"], optional = true }
+#ron = { version = "0.8.0", optional = true }
+downcast-rs = "1.2.0"
+thiserror = "1.0"
+log = "0.4.21"
+env_logger = "0.11.3"
+
+[lints]
+workspace = true

@@ -1,0 +1,43 @@
+[package]
+name = "ens_internal"
+version = "0.14.0-dev"
+edition = "2021"
+description = "An internal Bevy crate used to facilitate optional dynamic linking via the 'dynamic_linking' feature"
+homepage = "https://bevyengine.org"
+repository = "https://github.com/bevyengine/bevy"
+license = "MIT OR Apache-2.0"
+keywords = ["game", "engine", "gamedev", "graphics", "bevy"]
+categories = ["game-engines", "graphics", "gui", "rendering"]
+
+[features]
+serialize = [
+  "ens_core/serialize",
+  "ens_time/serialize",
+  "ens/serialize",
+]
+multi-threaded = [
+  "ens/multi-threaded",
+  "ens_tasks/multi-threaded",
+]
+async-io = ["ens_tasks/async-io"]
+
+# Used to disable code that is unsupported when Bevy is dynamically linked
+dynamic_linking = ["ens_diagnostic/dynamic_linking"]
+
+[dependencies]
+# ens
+ens_app = { path = "../ens_app", features = ["loop_wait"], version = "0.14.0-dev" }
+ens_core = { path = "../ens_core", version = "0.14.0-dev" }
+ens_derive = { path = "../ens_derive", version = "0.14.0-dev" }
+ens_diagnostic = { path = "../ens_diagnostic", optional = true, version = "0.14.0-dev" }
+ens = { path = "../ens", version = "0.14.0-dev" }
+ens_hierarchy = { path = "../ens_hierarchy", optional = true, version = "0.14.0-dev" }
+ens_ptr = { path = "../ens_ptr", version = "0.14.0-dev" }
+ens_time = { path = "../ens_time", version = "0.14.0-dev" }
+ens_utils = { path = "../ens_utils", optional = true, version = "0.14.0-dev" }
+ens_tasks = { path = "../ens_tasks", optional = true, version = "0.14.0-dev" }
+# (optional)
+ens_dynamic_plugin = { path = "../ens_dynamic_plugin", optional = true, version = "0.14.0-dev" }
+
+[lints]
+workspace = true

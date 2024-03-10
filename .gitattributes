@@ -1,0 +1,6 @@
+* text=unix
+
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout.
+*.rs text eol=input
+*.toml text eol=input

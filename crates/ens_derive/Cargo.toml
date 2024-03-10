@@ -1,0 +1,21 @@
+[package]
+name = "ens_derive"
+version = "0.14.0-dev"
+edition = "2021"
+description = "Provides derive implementations for Bevy Engine"
+homepage = "https://bevyengine.org"
+repository = "https://github.com/bevyengine/bevy"
+license = "MIT OR Apache-2.0"
+keywords = ["bevy"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+ens_macro_utils = { path = "../ens_macro_utils", version = "0.14.0-dev" }
+
+quote = "1.0"
+syn = { version = "2.0", features = ["full"] }
+
+[lints]
+workspace = true

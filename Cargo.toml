@@ -1,0 +1,477 @@
+[workspace]
+resolver = "2"
+version = "0.14.0-dev"
+edition = "2021"
+categories = ["game-engines", "graphics", "gui", "rendering"]
+description = "A refreshingly simple data-driven game engine and app framework"
+#exclude = ["assets/", "tools/", ".github/", "crates/"]
+homepage = "https://bevyengine.org"
+keywords = ["game", "engine", "gamedev", "graphics", "bevy"]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/bevyengine/bevy"
+documentation = "https://docs.rs/bevy"
+rust-version = "1.76.0"
+exclude = [
+  "benches",
+  "crates/ens_compile_fail_tests",
+  "crates/ens_macros_compile_fail_tests",
+]
+members = [
+  "crates/*",
+  "tools/ci",
+  "tools/build-templated-pages",
+  "errors",
+]
+
+[package]
+name = "ens_dist"
+
+[workspace.lints.clippy]
+type_complexity = "allow"
+doc_markdown = "warn"
+manual_let_else = "warn"
+undocumented_unsafe_blocks = "warn"
+redundant_else = "warn"
+match_same_arms = "warn"
+semicolon_if_nothing_returned = "warn"
+
+ptr_as_ptr = "warn"
+ptr_cast_constness = "warn"
+#TODO(rust 1.77): enable `ref_as_ptr`
+# ref_as_ptr = "warn"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "warn"
+missing_docs = "warn"
+
+[lints]
+workspace = true
+
+[features]
+default = ["multi-threaded"]
+
+# Force dynamic linking, which improves iterative compile times
+dynamic_linking = ["dep:ens_dylib", "ens_internal/dynamic_linking"]
+
+# Plugin for dynamic loading (using [libloading](https://crates.io/crates/libloading))
+ens_dynamic_plugin = ["ens_internal/ens_dynamic_plugin"]
+
+# Enable serialization support through serde
+serialize = ["ens_internal/serialize"]
+
+# Enables multithreaded parallelism in the engine. Disabling it forces all engine tasks to run on a single thread.
+multi-threaded = ["ens_internal/multi-threaded"]
+
+# Use async-io's implementation of block_on instead of futures-lite's implementation. This is preferred if your application uses async-io.
+async-io = ["ens_internal/async-io"]
+
+[dependencies]
+ens_dylib = { path = "crates/ens_dylib", version = "0.14.0-dev", default-features = false, optional = true }
+ens_internal = { path = "crates/ens_internal", version = "0.14.0-dev", default-features = false }
+
+[dev-dependencies]
+#rand = "0.8.0"
+#ron = "0.8.0"
+#flate2 = "1.0"
+#serde = { version = "1", features = ["derive"] }
+#bytemuck = "1.7"
+# Needed to poll Task examples
+#futures-lite = "2.0.1"
+#crossbeam-channel = "0.5.0"
+#argh = "0.1.12"
+#thiserror = "1.0"
+
+# Application
+[[example]]
+name = "custom_loop"
+path = "examples/app/custom_loop.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.custom_loop]
+name = "Custom Loop"
+description = "Demonstrates how to create a custom runner (to update an app manually)"
+category = "Application"
+wasm = false
+
+[[example]]
+name = "empty"
+path = "examples/app/empty.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.empty]
+name = "Empty"
+description = "An empty application (does nothing)"
+category = "Application"
+wasm = false
+
+[[example]]
+name = "empty_defaults"
+path = "examples/app/empty_defaults.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.empty_defaults]
+name = "Empty with Defaults"
+description = "An empty application with default plugins"
+category = "Application"
+
+[[example]]
+name = "headless"
+path = "examples/app/headless.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.headless]
+name = "Headless"
+description = "An application that runs without default plugins"
+category = "Application"
+
+[[example]]
+name = "plugin"
+path = "examples/app/plugin.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.plugin]
+name = "Plugin"
+description = "Demonstrates the creation and registration of a custom plugin"
+category = "Application"
+
+[[example]]
+name = "plugin_group"
+path = "examples/app/plugin_group.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.plugin_group]
+name = "Plugin Group"
+description = "Demonstrates the creation and registration of a custom plugin group"
+category = "Application"
+
+[[example]]
+name = "return_after_run"
+path = "examples/app/return_after_run.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.return_after_run]
+name = "Return after Run"
+description = "Show how to return to main after the Bevy app has exited"
+category = "Application"
+
+[[example]]
+name = "thread_pool_resources"
+path = "examples/app/thread_pool_resources.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.thread_pool_resources]
+name = "Thread Pool Resources"
+description = "Creates and customizes the internal thread pool"
+category = "Application"
+
+# Diagnostics
+[[example]]
+name = "log_diagnostics"
+path = "examples/diagnostics/log_diagnostics.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.log_diagnostics]
+name = "Log Diagnostics"
+description = "Add a plugin that logs diagnostics, like frames per second (FPS), to the console"
+category = "Diagnostics"
+
+[[example]]
+name = "custom_diagnostic"
+path = "examples/diagnostics/custom_diagnostic.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.custom_diagnostic]
+name = "Custom Diagnostic"
+description = "Shows how to create a custom diagnostic"
+category = "Diagnostics"
+
+# ECS (Entity Component System)
+[[example]]
+name = "ecs_guide"
+path = "examples/ecs/ecs_guide.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.ecs_guide]
+name = "ECS Guide"
+description = "Full guide to Bevy's ECS"
+category = "ECS (Entity Component System)"
+
+[package.metadata.example.apply_deferred]
+name = "Apply System Buffers"
+description = "Show how to use `apply_deferred` system"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "component_change_detection"
+path = "examples/ecs/component_change_detection.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.component_change_detection]
+name = "Component Change Detection"
+description = "Change detection on components"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "component_hooks"
+path = "examples/ecs/component_hooks.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.component_hooks]
+name = "Component Hooks"
+description = "Define component hooks to manage component lifecycle events"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "custom_schedule"
+path = "examples/ecs/custom_schedule.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.custom_schedule]
+name = "Custom Schedule"
+description = "Demonstrates how to add custom schedules"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "custom_query_param"
+path = "examples/ecs/custom_query_param.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.custom_query_param]
+name = "Custom Query Parameters"
+description = "Groups commonly used compound queries and query filters into a single type"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "dynamic"
+path = "examples/ecs/dynamic.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.dynamic]
+name = "Dynamic ECS"
+description = "Dynamically create components, spawn entities with those components and query those components"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "event"
+path = "examples/ecs/event.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.event]
+name = "Event"
+description = "Illustrates event creation, activation, and reception"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "send_and_receive_events"
+path = "examples/ecs/send_and_receive_events.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.send_and_receive_events]
+name = "Send and receive events"
+description = "Demonstrates how to send and receive events of the same type in a single system"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "fixed_timestep"
+path = "examples/ecs/fixed_timestep.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.fixed_timestep]
+name = "Fixed Timestep"
+description = "Shows how to create systems that run every fixed timestep, rather than every tick"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "generic_system"
+path = "examples/ecs/generic_system.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.generic_system]
+name = "Generic System"
+description = "Shows how to create systems that can be reused with different types"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "hierarchy"
+path = "examples/ecs/hierarchy.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.hierarchy]
+name = "Hierarchy"
+description = "Creates a hierarchy of parents and children entities"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "iter_combinations"
+path = "examples/ecs/iter_combinations.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.iter_combinations]
+name = "Iter Combinations"
+description = "Shows how to iterate over combinations of query results"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "one_shot_systems"
+path = "examples/ecs/one_shot_systems.rs"
+
+[package.metadata.example.one_shot_systems]
+name = "One Shot Systems"
+description = "Shows how to flexibly run systems without scheduling them"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "parallel_query"
+path = "examples/ecs/parallel_query.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.parallel_query]
+name = "Parallel Query"
+description = "Illustrates parallel queries with `ParallelIterator`"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "removal_detection"
+path = "examples/ecs/removal_detection.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.removal_detection]
+name = "Removal Detection"
+description = "Query for entities that had a specific component removed earlier in the current frame"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "run_conditions"
+path = "examples/ecs/run_conditions.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.run_conditions]
+name = "Run Conditions"
+description = "Run systems only when one or multiple conditions are met"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "startup_system"
+path = "examples/ecs/startup_system.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.startup_system]
+name = "Startup System"
+description = "Demonstrates a startup system (one that runs once when the app starts up)"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "state"
+path = "examples/ecs/state.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.state]
+name = "State"
+description = "Illustrates how to use States to control transitioning from a Menu state to an InGame state"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "system_piping"
+path = "examples/ecs/system_piping.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.system_piping]
+name = "System Piping"
+description = "Pipe the output of one system into a second, allowing you to handle any errors gracefully"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "system_closure"
+path = "examples/ecs/system_closure.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.system_closure]
+name = "System Closure"
+description = "Show how to use closures as systems, and how to configure `Local` variables by capturing external state"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "system_param"
+path = "examples/ecs/system_param.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.system_param]
+name = "System Parameter"
+description = "Illustrates creating custom system parameters with `SystemParam`"
+category = "ECS (Entity Component System)"
+
+[[example]]
+name = "system_stepping"
+path = "examples/ecs/system_stepping.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.system_stepping]
+name = "System Stepping"
+description = "Demonstrate stepping through systems in order of execution"
+category = "ECS (Entity Component System)"
+
+# Time
+[[example]]
+name = "time"
+path = "examples/time/time.rs"
+
+[package.metadata.example.time]
+name = "Time handling"
+description = "Explains how Time is handled in ECS"
+category = "Time"
+
+[[example]]
+name = "virtual_time"
+path = "examples/time/virtual_time.rs"
+
+[package.metadata.example.virtual_time]
+name = "Virtual time"
+description = "Shows how `Time<Virtual>` can be used to pause, resume, slow down and speed up a game."
+category = "Time"
+
+[[example]]
+name = "timers"
+path = "examples/time/timers.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.timers]
+name = "Timers"
+description = "Illustrates ticking `Timer` resources inside systems and handling their state"
+category = "Time"
+
+# Stress tests
+[[package.metadata.example_category]]
+name = "Stress Tests"
+description = """
+These examples are used to test the performance and stability of various parts of the engine in an isolated way.
+
+Due to the focus on performance it's recommended to run the stress tests in release mode:
+
+```sh
+cargo run --release --example <example name>
+```
+"""
+
+[[example]]
+name = "bevymark"
+path = "examples/stress_tests/bevymark.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.bevymark]
+name = "Bevymark"
+description = "A heavy sprite rendering workload to benchmark your system with Bevy"
+category = "Stress Tests"
+
+[[example]]
+name = "nondeterministic_system_order"
+path = "examples/ecs/nondeterministic_system_order.rs"
+doc-scrape-examples = true
+
+[package.metadata.example.nondeterministic_system_order]
+name = "Nondeterministic System Order"
+description = "Systems run in parallel, but their order isn't always deterministic. Here's how to detect and fix this."
+category = "ECS (Entity Component System)"
+
+[package.metadata.docs.rs]
+cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
