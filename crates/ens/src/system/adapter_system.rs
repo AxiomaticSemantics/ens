@@ -8,11 +8,11 @@ use crate::{schedule::InternedSystemSet, world::unsafe_world_cell::UnsafeWorldCe
 /// # Examples
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
-/// use bevy_ecs::system::{Adapt, AdapterSystem};
+/// # use ens::prelude::*;
+/// use ens::system::{Adapt, AdapterSystem};
 ///
 /// // A system adapter that inverts the result of a system.
-/// // NOTE: Instead of manually implementing this, you can just use `bevy_ecs::schedule::common_conditions::not`.
+/// // NOTE: Instead of manually implementing this, you can just use `ens_ecs::schedule::common_conditions::not`.
 /// pub type NotSystem<S> = AdapterSystem<NotMarker, S>;
 ///
 /// // This struct is used to customize the behavior of our adapter.

@@ -14,8 +14,8 @@ pub trait ParallelSlice<T: Sync>: AsRef<[T]> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_tasks::prelude::*;
-    /// # use bevy_tasks::TaskPool;
+    /// # use ens_tasks::prelude::*;
+    /// # use ens_tasks::TaskPool;
     /// let task_pool = TaskPool::new();
     /// let counts = (0..10000).collect::<Vec<u32>>();
     /// let incremented = counts.par_chunk_map(&task_pool, 100, |_index, chunk| {
@@ -61,8 +61,8 @@ pub trait ParallelSlice<T: Sync>: AsRef<[T]> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_tasks::prelude::*;
-    /// # use bevy_tasks::TaskPool;
+    /// # use ens_tasks::prelude::*;
+    /// # use ens_tasks::TaskPool;
     /// let task_pool = TaskPool::new();
     /// let counts = (0..10000).collect::<Vec<u32>>();
     /// let incremented = counts.par_splat_map(&task_pool, None, |_index, chunk| {
@@ -114,8 +114,8 @@ pub trait ParallelSliceMut<T: Send>: AsMut<[T]> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_tasks::prelude::*;
-    /// # use bevy_tasks::TaskPool;
+    /// # use ens_tasks::prelude::*;
+    /// # use ens_tasks::TaskPool;
     /// let task_pool = TaskPool::new();
     /// let mut counts = (0..10000).collect::<Vec<u32>>();
     /// let incremented = counts.par_chunk_map_mut(&task_pool, 100, |_index, chunk| {
@@ -164,8 +164,8 @@ pub trait ParallelSliceMut<T: Send>: AsMut<[T]> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_tasks::prelude::*;
-    /// # use bevy_tasks::TaskPool;
+    /// # use ens_tasks::prelude::*;
+    /// # use ens_tasks::TaskPool;
     /// let task_pool = TaskPool::new();
     /// let mut counts = (0..10000).collect::<Vec<u32>>();
     /// let incremented = counts.par_splat_map_mut(&task_pool, None, |_index, chunk| {

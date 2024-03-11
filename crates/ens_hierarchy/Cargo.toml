@@ -17,9 +17,7 @@ ens_app = ["dep:ens_app", "ens_core/entity_name"]
 ens = { path = "../ens", version = "0.14.0-dev", features = ["entity_mapper"], default-features = false }
 ens_app = { path = "../ens_app", version = "0.14.0-dev", optional = true }
 ens_core = { path = "../ens_core", version = "0.14.0-dev", optional = true }
-ens_utils = { path = "../ens_utils", version = "0.14.0-dev" }
 
-env_logger = "0.11.3"
 log = "0.4.21"
 
 smallvec = { version = "1.11", features = ["union", "const_generics"] }

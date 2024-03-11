@@ -354,9 +354,9 @@ impl<'w> WorldCell<'w> {
         match self.get_resource_mut::<Events<E>>() {
             Some(mut events_resource) => events_resource.extend(events),
             None => error!(
-                    "Unable to send event `{}`\n\tEvent must be added to the app with `add_event()`\n\thttps://docs.rs/bevy/*/bevy/app/struct.App.html#method.add_event ",
-                    std::any::type_name::<E>()
-                ),
+                "Unable to send event `{}`\n\tEvent must be added to the app with `add_event()`",
+                std::any::type_name::<E>()
+            ),
         }
     }
 }

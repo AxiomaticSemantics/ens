@@ -35,12 +35,12 @@ use std::marker::PhantomData;
 /// Commands are almost always used as a [`SystemParam`](crate::system::SystemParam).
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// #
 /// fn my_system(mut commands: Commands) {
 ///    // ...
 /// }
-/// # bevy_ecs::system::assert_is_system(my_system);
+/// # ens::system::assert_is_system(my_system);
 /// ```
 ///
 /// # Implementing
@@ -53,7 +53,7 @@ use std::marker::PhantomData;
 /// anonymous custom commands.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # fn foo(mut commands: Commands) {
 /// // NOTE: type inference fails here, so annotations are required on the closure.
 /// commands.add(|w: &mut World| {
@@ -98,7 +98,7 @@ impl<'w, 's> Commands<'w, 's> {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// fn my_system(mut commands: Commands) {
     ///     // We do our initialization in a separate function,
     ///     // which expects an owned `Commands`.
@@ -130,7 +130,7 @@ impl<'w, 's> Commands<'w, 's> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     ///
     /// #[derive(Component)]
     /// struct Label(&'static str);
@@ -150,7 +150,7 @@ impl<'w, 's> Commands<'w, 's> {
     ///         // adds a single component to the entity
     ///         .insert(Label("hello world"));
     /// }
-    /// # bevy_ecs::system::assert_is_system(example_system);
+    /// # ens::system::assert_is_system(example_system);
     /// ```
     ///
     /// # See also
@@ -195,7 +195,7 @@ impl<'w, 's> Commands<'w, 's> {
     /// # Example
     ///
     /// ```
-    /// use bevy_ecs::prelude::*;
+    /// use ens::prelude::*;
     ///
     /// #[derive(Component)]
     /// struct Component1;
@@ -232,7 +232,7 @@ impl<'w, 's> Commands<'w, 's> {
     ///         // or insert single components like this:
     ///         .insert(Label("hello world"));
     /// }
-    /// # bevy_ecs::system::assert_is_system(example_system);
+    /// # ens::system::assert_is_system(example_system);
     /// ```
     ///
     /// # See also
@@ -254,7 +254,7 @@ impl<'w, 's> Commands<'w, 's> {
     /// # Example
     ///
     /// ```
-    /// use bevy_ecs::prelude::*;
+    /// use ens::prelude::*;
     ///
     /// #[derive(Component)]
     /// struct Label(&'static str);
@@ -273,7 +273,7 @@ impl<'w, 's> Commands<'w, 's> {
     ///         // adds a single component to the entity
     ///         .insert(Label("hello world"));
     /// }
-    /// # bevy_ecs::system::assert_is_system(example_system);
+    /// # ens::system::assert_is_system(example_system);
     /// ```
     ///
     /// # See also
@@ -307,7 +307,7 @@ impl<'w, 's> Commands<'w, 's> {
     /// # Example
     ///
     /// ```
-    /// use bevy_ecs::prelude::*;
+    /// use ens::prelude::*;
     ///
     /// #[derive(Component)]
     /// struct Label(&'static str);
@@ -322,7 +322,7 @@ impl<'w, 's> Commands<'w, 's> {
     ///         entity_commands.insert(Label("hello world"));
     ///     }
     /// }
-    /// # bevy_ecs::system::assert_is_system(example_system);
+    /// # ens::system::assert_is_system(example_system);
     /// ```
     ///
     /// # See also
@@ -349,7 +349,7 @@ impl<'w, 's> Commands<'w, 's> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Component)]
     /// # struct Name(String);
@@ -368,7 +368,7 @@ impl<'w, 's> Commands<'w, 's> {
     ///     ),
     /// ]);
     /// # }
-    /// # bevy_ecs::system::assert_is_system(system);
+    /// # ens::system::assert_is_system(system);
     /// ```
     ///
     /// # See also
@@ -423,7 +423,7 @@ impl<'w, 's> Commands<'w, 's> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Resource, Default)]
     /// # struct Scoreboard {
@@ -434,7 +434,7 @@ impl<'w, 's> Commands<'w, 's> {
     /// # fn initialise_scoreboard(mut commands: Commands) {
     /// commands.init_resource::<Scoreboard>();
     /// # }
-    /// # bevy_ecs::system::assert_is_system(initialise_scoreboard);
+    /// # ens::system::assert_is_system(initialise_scoreboard);
     /// ```
     pub fn init_resource<R: Resource + FromWorld>(&mut self) {
         self.queue.push(init_resource::<R>);
@@ -449,7 +449,7 @@ impl<'w, 's> Commands<'w, 's> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Resource)]
     /// # struct Scoreboard {
@@ -463,7 +463,7 @@ impl<'w, 's> Commands<'w, 's> {
     ///     high_score: 0,
     /// });
     /// # }
-    /// # bevy_ecs::system::assert_is_system(system);
+    /// # ens::system::assert_is_system(system);
     /// ```
     pub fn insert_resource<R: Resource>(&mut self, resource: R) {
         self.queue.push(insert_resource(resource));
@@ -476,7 +476,7 @@ impl<'w, 's> Commands<'w, 's> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Resource)]
     /// # struct Scoreboard {
@@ -487,7 +487,7 @@ impl<'w, 's> Commands<'w, 's> {
     /// # fn system(mut commands: Commands) {
     /// commands.remove_resource::<Scoreboard>();
     /// # }
-    /// # bevy_ecs::system::assert_is_system(system);
+    /// # ens::system::assert_is_system(system);
     /// ```
     pub fn remove_resource<R: Resource>(&mut self) {
         self.queue.push(remove_resource::<R>);
@@ -527,7 +527,7 @@ impl<'w, 's> Commands<'w, 's> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::{world::Command, prelude::*};
+    /// # use ens::{world::Command, prelude::*};
     /// #[derive(Resource, Default)]
     /// struct Counter(u64);
     ///
@@ -550,8 +550,8 @@ impl<'w, 's> Commands<'w, 's> {
     ///     });
     /// }
 
-    /// # bevy_ecs::system::assert_is_system(add_three_to_counter_system);
-    /// # bevy_ecs::system::assert_is_system(add_twenty_five_to_counter_system);
+    /// # ens::system::assert_is_system(add_three_to_counter_system);
+    /// # ens::system::assert_is_system(add_twenty_five_to_counter_system);
     /// ```
     pub fn add<C: Command>(&mut self, command: C) {
         self.queue.push(command);
@@ -564,8 +564,8 @@ impl<'w, 's> Commands<'w, 's> {
 ///
 /// ```
 /// # use std::collections::HashSet;
-/// # use bevy_ecs::prelude::*;
-/// use bevy_ecs::system::EntityCommand;
+/// # use ens::prelude::*;
+/// use ens::system::EntityCommand;
 /// #
 /// # #[derive(Component, PartialEq)]
 /// # struct Name(String);
@@ -656,12 +656,12 @@ impl EntityCommands<'_> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// fn my_system(mut commands: Commands) {
     ///     let entity_id = commands.spawn_empty().id();
     /// }
-    /// # bevy_ecs::system::assert_is_system(my_system);
+    /// # ens::system::assert_is_system(my_system);
     /// ```
     #[inline]
     #[must_use = "Omit the .id() call if you do not need to store the `Entity` identifier."]
@@ -691,7 +691,7 @@ impl EntityCommands<'_> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource)]
     /// # struct PlayerEntity { entity: Entity }
     /// #[derive(Component)]
@@ -727,7 +727,7 @@ impl EntityCommands<'_> {
     ///             },
     ///         ));
     /// }
-    /// # bevy_ecs::system::assert_is_system(add_combat_stats_system);
+    /// # ens::system::assert_is_system(add_combat_stats_system);
     /// ```
     pub fn insert(&mut self, bundle: impl Bundle) -> &mut Self {
         self.add(insert(bundle))
@@ -744,7 +744,7 @@ impl EntityCommands<'_> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource)]
     /// # struct PlayerEntity { entity: Entity }
     /// #[derive(Component)]
@@ -779,7 +779,7 @@ impl EntityCommands<'_> {
     ///    // This will not panic nor will it add the component
     ///      .try_insert(Defense(5));
     /// }
-    /// # bevy_ecs::system::assert_is_system(add_combat_stats_system);
+    /// # ens::system::assert_is_system(add_combat_stats_system);
     /// ```
     pub fn try_insert(&mut self, bundle: impl Bundle) -> &mut Self {
         self.add(try_insert(bundle))
@@ -790,7 +790,7 @@ impl EntityCommands<'_> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Resource)]
     /// # struct PlayerEntity { entity: Entity }
@@ -818,7 +818,7 @@ impl EntityCommands<'_> {
     ///         // This is equivalent to the calls above:
     ///         .remove::<(Defense, CombatBundle)>();
     /// }
-    /// # bevy_ecs::system::assert_is_system(remove_combat_stats_system);
+    /// # ens::system::assert_is_system(remove_combat_stats_system);
     /// ```
     pub fn remove<T>(&mut self) -> &mut Self
     where
@@ -834,7 +834,7 @@ impl EntityCommands<'_> {
     /// # Note
     ///
     /// This won't clean up external references to the entity (such as parent-child relationships
-    /// if you're using `bevy_hierarchy`), which may leave the world in an invalid state.
+    /// if you're using `ens_hierarchy`), which may leave the world in an invalid state.
     ///
     /// # Panics
     ///
@@ -843,7 +843,7 @@ impl EntityCommands<'_> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Resource)]
     /// # struct CharacterToRemove { entity: Entity }
@@ -855,7 +855,7 @@ impl EntityCommands<'_> {
     /// {
     ///     commands.entity(character_to_remove.entity).despawn();
     /// }
-    /// # bevy_ecs::system::assert_is_system(remove_character_system);
+    /// # ens::system::assert_is_system(remove_character_system);
     /// ```
     pub fn despawn(&mut self) {
         self.add(despawn);
@@ -866,7 +866,7 @@ impl EntityCommands<'_> {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # fn my_system(mut commands: Commands) {
     /// commands
     ///     .spawn_empty()
@@ -875,7 +875,7 @@ impl EntityCommands<'_> {
     ///         println!("Executed an EntityCommand for {:?}", entity.id());
     ///     });
     /// # }
-    /// # bevy_ecs::system::assert_is_system(my_system);
+    /// # ens::system::assert_is_system(my_system);
     /// ```
     pub fn add<M: 'static>(&mut self, command: impl EntityCommand<M>) -> &mut Self {
         self.commands.add(command.with_entity(self.entity));
@@ -889,7 +889,7 @@ impl EntityCommands<'_> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Resource)]
     /// # struct PlayerEntity { entity: Entity }
@@ -917,7 +917,7 @@ impl EntityCommands<'_> {
     ///         // And you can remove all the components by passing in an empty Bundle
     ///         .retain::<()>();
     /// }
-    /// # bevy_ecs::system::assert_is_system(remove_combat_stats_system);
+    /// # ens::system::assert_is_system(remove_combat_stats_system);
     /// ```
     pub fn retain<T>(&mut self) -> &mut Self
     where
@@ -1007,7 +1007,7 @@ where
 /// # Note
 ///
 /// This won't clean up external references to the entity (such as parent-child relationships
-/// if you're using `bevy_hierarchy`), which may leave the world in an invalid state.
+/// if you're using `ens_hierarchy`), which may leave the world in an invalid state.
 fn despawn(entity: Entity, world: &mut World) {
     world.despawn(entity);
 }

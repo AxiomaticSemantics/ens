@@ -24,7 +24,7 @@ use super::{unsafe_world_cell::UnsafeEntityCell, Ref};
 /// Read-only access disjoint with mutable access.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Component)] pub struct A;
 /// # #[derive(Component)] pub struct B;
 /// fn disjoint_system(
@@ -33,7 +33,7 @@ use super::{unsafe_world_cell::UnsafeEntityCell, Ref};
 /// ) {
 ///     // ...
 /// }
-/// # bevy_ecs::system::assert_is_system(disjoint_system);
+/// # ens::system::assert_is_system(disjoint_system);
 /// ```
 #[derive(Copy, Clone)]
 pub struct EntityRef<'w>(UnsafeEntityCell<'w>);
@@ -254,7 +254,7 @@ impl<'a> TryFrom<&'a FilteredEntityMut<'_>> for EntityRef<'a> {
 /// Disjoint mutable access.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Component)] pub struct A;
 /// fn disjoint_system(
 ///     query1: Query<EntityMut, With<A>>,
@@ -262,7 +262,7 @@ impl<'a> TryFrom<&'a FilteredEntityMut<'_>> for EntityRef<'a> {
 /// ) {
 ///     // ...
 /// }
-/// # bevy_ecs::system::assert_is_system(disjoint_system);
+/// # ens::system::assert_is_system(disjoint_system);
 /// ```
 pub struct EntityMut<'w>(UnsafeEntityCell<'w>);
 
@@ -1165,7 +1165,7 @@ impl<'w> EntityWorldMut<'w> {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #[derive(Resource, Default, Clone, Copy)]
     /// struct R(u32);
     ///
@@ -1218,7 +1218,7 @@ impl<'w> EntityWorldMut<'w> {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
     /// struct Comp(u32);
     ///
@@ -1266,7 +1266,7 @@ impl<'w, 'a, T: Component> Entry<'w, 'a, T> {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
     /// struct Comp(u32);
     ///
@@ -1292,7 +1292,7 @@ impl<'w, 'a, T: Component> Entry<'w, 'a, T> {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
     /// struct Comp(u32);
     ///
@@ -1322,7 +1322,7 @@ impl<'w, 'a, T: Component> Entry<'w, 'a, T> {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
     /// struct Comp(u32);
     ///
@@ -1351,7 +1351,7 @@ impl<'w, 'a, T: Component> Entry<'w, 'a, T> {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
     /// struct Comp(u32);
     ///
@@ -1377,7 +1377,7 @@ impl<'w, 'a, T: Component + Default> Entry<'w, 'a, T> {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
     /// struct Comp(u32);
     ///
@@ -1410,7 +1410,7 @@ impl<'w, 'a, T: Component> OccupiedEntry<'w, 'a, T> {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::{prelude::*, world::Entry};
+    /// # use ens::{prelude::*, world::Entry};
     /// #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
     /// struct Comp(u32);
     ///
@@ -1437,7 +1437,7 @@ impl<'w, 'a, T: Component> OccupiedEntry<'w, 'a, T> {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::{prelude::*, world::Entry};
+    /// # use ens::{prelude::*, world::Entry};
     /// #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
     /// struct Comp(u32);
     ///
@@ -1470,7 +1470,7 @@ impl<'w, 'a, T: Component> OccupiedEntry<'w, 'a, T> {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::{prelude::*, world::Entry};
+    /// # use ens::{prelude::*, world::Entry};
     /// #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
     /// struct Comp(u32);
     ///
@@ -1494,7 +1494,7 @@ impl<'w, 'a, T: Component> OccupiedEntry<'w, 'a, T> {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::{prelude::*, world::Entry};
+    /// # use ens::{prelude::*, world::Entry};
     /// #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
     /// struct Comp(u32);
     ///
@@ -1517,7 +1517,7 @@ impl<'w, 'a, T: Component> OccupiedEntry<'w, 'a, T> {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::{prelude::*, world::Entry};
+    /// # use ens::{prelude::*, world::Entry};
     /// #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
     /// struct Comp(u32);
     ///
@@ -1549,7 +1549,7 @@ impl<'w, 'a, T: Component> VacantEntry<'w, 'a, T> {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::{prelude::*, world::Entry};
+    /// # use ens::{prelude::*, world::Entry};
     /// #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
     /// struct Comp(u32);
     ///
@@ -1574,7 +1574,7 @@ impl<'w, 'a, T: Component> VacantEntry<'w, 'a, T> {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::{prelude::*, world::Entry};
+    /// # use ens::{prelude::*, world::Entry};
     /// #[derive(Component, Default, Clone, Copy, Debug, PartialEq)]
     /// struct Comp(u32);
     ///

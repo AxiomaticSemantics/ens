@@ -1,7 +1,7 @@
-use bevy_ecs::query::QueryData;
-use bevy_ecs::{component::Component, entity::Entity};
+use ens::query::QueryData;
+use ens::{component::Component, entity::Entity};
 
-use bevy_utils::AHasher;
+use ens_utils::AHasher;
 use std::{
     borrow::Cow,
     hash::{Hash, Hasher},
@@ -17,7 +17,7 @@ use std::{
 /// used instead as the default unique identifier.
 #[derive(Component, Clone)]
 pub struct Name {
-    hash: u64, // Won't be serialized (see: `bevy_core::serde` module)
+    hash: u64, // Won't be serialized (see: `ens_core::serde` module)
     name: Cow<'static, str>,
 }
 
@@ -86,8 +86,8 @@ impl std::fmt::Debug for Name {
 /// Convenient query for giving a human friendly name to an entity.
 ///
 /// ```
-/// # use bevy_core::prelude::*;
-/// # use bevy_ecs::prelude::*;
+/// # use ens_core::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Component)] pub struct Score(f32);
 /// fn increment_score(mut scores: Query<(DebugName, &mut Score)>) {
 ///     for (name, mut score) in &mut scores {
@@ -97,7 +97,7 @@ impl std::fmt::Debug for Name {
 ///         }
 ///     }
 /// }
-/// # bevy_ecs::system::assert_is_system(increment_score);
+/// # ens::system::assert_is_system(increment_score);
 /// ```
 #[derive(QueryData)]
 pub struct DebugName {

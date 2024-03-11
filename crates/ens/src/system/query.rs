@@ -39,20 +39,20 @@ use std::borrow::Borrow;
 /// A query defined with a reference to a component as the query fetch type parameter can be used to generate items that refer to the data of said component.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Component)]
 /// # struct ComponentA;
 /// # fn immutable_ref(
 /// // A component can be accessed by shared reference...
 /// query: Query<&ComponentA>
 /// # ) {}
-/// # bevy_ecs::system::assert_is_system(immutable_ref);
+/// # ens::system::assert_is_system(immutable_ref);
 ///
 /// # fn mutable_ref(
 /// // ... or by mutable reference.
 /// query: Query<&mut ComponentA>
 /// # ) {}
-/// # bevy_ecs::system::assert_is_system(mutable_ref);
+/// # ens::system::assert_is_system(mutable_ref);
 /// ```
 ///
 /// ## Query filtering
@@ -60,7 +60,7 @@ use std::borrow::Borrow;
 /// Setting the query filter type parameter will ensure that each query item satisfies the given condition.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Component)]
 /// # struct ComponentA;
 /// # #[derive(Component)]
@@ -70,7 +70,7 @@ use std::borrow::Borrow;
 /// // `ComponentB`.
 /// query: Query<&ComponentA, With<ComponentB>>
 /// # ) {}
-/// # bevy_ecs::system::assert_is_system(system);
+/// # ens::system::assert_is_system(system);
 /// ```
 ///
 /// ## `QueryData` or `QueryFilter` tuples
@@ -80,7 +80,7 @@ use std::borrow::Borrow;
 /// In the following example, two components are accessed simultaneously, and the query items are filtered on two conditions.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Component)]
 /// # struct ComponentA;
 /// # #[derive(Component)]
@@ -92,7 +92,7 @@ use std::borrow::Borrow;
 /// # fn immutable_ref(
 /// query: Query<(&ComponentA, &ComponentB), (With<ComponentC>, Without<ComponentD>)>
 /// # ) {}
-/// # bevy_ecs::system::assert_is_system(immutable_ref);
+/// # ens::system::assert_is_system(immutable_ref);
 /// ```
 ///
 /// ## Entity identifier access
@@ -100,13 +100,13 @@ use std::borrow::Borrow;
 /// The identifier of an entity can be made available inside the query item by including [`Entity`] in the query fetch type parameter.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Component)]
 /// # struct ComponentA;
 /// # fn system(
 /// query: Query<(Entity, &ComponentA)>
 /// # ) {}
-/// # bevy_ecs::system::assert_is_system(system);
+/// # ens::system::assert_is_system(system);
 /// ```
 ///
 /// ## Optional component access
@@ -116,7 +116,7 @@ use std::borrow::Borrow;
 /// In this case, its corresponding value will be `None`.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Component)]
 /// # struct ComponentA;
 /// # #[derive(Component)]
@@ -125,7 +125,7 @@ use std::borrow::Borrow;
 /// // Generates items for entities that contain `ComponentA`, and optionally `ComponentB`.
 /// query: Query<(&ComponentA, Option<&ComponentB>)>
 /// # ) {}
-/// # bevy_ecs::system::assert_is_system(system);
+/// # ens::system::assert_is_system(system);
 /// ```
 ///
 /// See the documentation for [`AnyOf`] to idiomatically declare many optional components.
@@ -142,7 +142,7 @@ use std::borrow::Borrow;
 /// This would violate mutability rules.
 ///
 /// ```should_panic
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Component)]
 /// # struct Health;
 /// # #[derive(Component)]
@@ -165,7 +165,7 @@ use std::borrow::Borrow;
 /// In this way, any entity that has both `Player` and `Enemy` components is excluded from both queries.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Component)]
 /// # struct Health;
 /// # #[derive(Component)]
@@ -194,13 +194,13 @@ use std::borrow::Borrow;
 /// should be sparingly used.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Component)]
 /// # struct ComponentA;
 /// # fn system(
 /// query: Query<(EntityRef, &ComponentA)>
 /// # ) {}
-/// # bevy_ecs::system::assert_is_system(system);
+/// # ens::system::assert_is_system(system);
 /// ```
 ///
 /// As `EntityRef` can read any component on an entity, a query using it will conflict with *any* mutable
@@ -209,17 +209,17 @@ use std::borrow::Borrow;
 /// and also allows it to parallelize with other non-conflicting systems.
 ///
 /// ```should_panic
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Component)]
 /// # struct ComponentA;
 /// # fn system(
 /// // This will panic!
 /// query: Query<(EntityRef, &mut ComponentA)>
 /// # ) {}
-/// # bevy_ecs::system::assert_system_does_not_conflict(system);
+/// # ens::system::assert_system_does_not_conflict(system);
 /// ```
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Component)]
 /// # struct ComponentA;
 /// # #[derive(Component)]
@@ -229,7 +229,7 @@ use std::borrow::Borrow;
 /// query_a: Query<EntityRef, With<ComponentA>>,
 /// query_b: Query<&mut ComponentB, Without<ComponentA>>,
 /// # ) {}
-/// # bevy_ecs::system::assert_system_does_not_conflict(system);
+/// # ens::system::assert_system_does_not_conflict(system);
 /// ```
 ///
 /// # Accessing query items
@@ -293,7 +293,7 @@ use std::borrow::Borrow;
 /// after the change!
 ///
 /// ```rust
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Component)]
 /// # struct ComponentA;
 /// # fn system(
@@ -308,7 +308,7 @@ use std::borrow::Borrow;
 ///     // do things with the component
 /// }
 /// # }
-/// # bevy_ecs::system::assert_system_does_not_conflict(system);
+/// # ens::system::assert_system_does_not_conflict(system);
 /// ```
 ///
 /// [`Component`]: crate::component::Component
@@ -412,7 +412,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// Here, the `report_names_system` iterates over the `Player` component of every entity that contains it:
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Component)]
     /// # struct Player { name: String }
@@ -422,7 +422,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ///         println!("Say hello to {}!", player.name);
     ///     }
     /// }
-    /// # bevy_ecs::system::assert_is_system(report_names_system);
+    /// # ens::system::assert_is_system(report_names_system);
     /// ```
     ///
     /// # See also
@@ -447,7 +447,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// Here, the `gravity_system` updates the `Velocity` component of every entity that contains it:
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Component)]
     /// # struct Velocity { x: f32, y: f32, z: f32 }
@@ -457,7 +457,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ///         velocity.y -= 9.8 * DELTA;
     ///     }
     /// }
-    /// # bevy_ecs::system::assert_is_system(gravity_system);
+    /// # ens::system::assert_is_system(gravity_system);
     /// ```
     ///
     /// # See also
@@ -477,7 +477,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Component)]
     /// # struct ComponentA;
     /// #
@@ -512,7 +512,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Component)]
     /// # struct ComponentA;
     /// fn some_system(mut query: Query<&mut ComponentA>) {
@@ -545,7 +545,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Component)]
     /// # struct Counter {
     /// #     value: i32
@@ -567,7 +567,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ///         }
     ///     }
     /// }
-    /// # bevy_ecs::system::assert_is_system(system);
+    /// # ens::system::assert_is_system(system);
     /// ```
     ///
     /// # See also
@@ -602,7 +602,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #[derive(Component)]
     /// struct Counter {
     ///     value: i32
@@ -625,7 +625,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ///         }
     ///     }
     /// }
-    /// # bevy_ecs::system::assert_is_system(system);
+    /// # ens::system::assert_is_system(system);
     /// ```
     #[inline]
     pub fn iter_many_mut<EntityList: IntoIterator>(
@@ -750,7 +750,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// Here, the `gravity_system` updates the `Velocity` component of every entity that contains it:
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Component)]
     /// # struct Velocity { x: f32, y: f32, z: f32 }
@@ -760,7 +760,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ///         velocity.y -= 9.8 * DELTA;
     ///     });
     /// }
-    /// # bevy_ecs::system::assert_is_system(gravity_system);
+    /// # ens::system::assert_is_system(gravity_system);
     /// ```
     ///
     /// [`par_iter`]: Self::par_iter
@@ -785,7 +785,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// Here, `get` is used to retrieve the exact query item of the entity specified by the `SelectedCharacter` resource.
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Resource)]
     /// # struct SelectedCharacter { entity: Entity }
@@ -801,7 +801,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ///         println!("{}", selected_character.name);
     ///     }
     /// }
-    /// # bevy_ecs::system::assert_is_system(print_selected_character_name_system);
+    /// # ens::system::assert_is_system(print_selected_character_name_system);
     /// ```
     ///
     /// # See also
@@ -853,7 +853,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ///
     /// # Examples
     /// ``` no_run
-    /// use bevy_ecs::prelude::*;
+    /// use ens::prelude::*;
     ///
     /// #[derive(Component)]
     /// struct Targets([Entity; 3]);
@@ -903,7 +903,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// Here, `get_mut` is used to retrieve the exact query item of the entity specified by the `PoisonedCharacter` resource.
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Resource)]
     /// # struct PoisonedCharacter { character_id: Entity }
@@ -915,7 +915,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ///         health.0 -= 1;
     ///     }
     /// }
-    /// # bevy_ecs::system::assert_is_system(poison_system);
+    /// # ens::system::assert_is_system(poison_system);
     /// ```
     ///
     /// # See also
@@ -961,7 +961,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// # Examples
     ///
     /// ``` no_run
-    /// use bevy_ecs::prelude::*;
+    /// use ens::prelude::*;
     ///
     /// #[derive(Component)]
     /// struct Spring{
@@ -1039,7 +1039,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Component)]
     /// # struct Player;
     /// # #[derive(Component)]
@@ -1048,7 +1048,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ///     let player_position = query.single();
     ///     // do something with player_position
     /// }
-    /// # bevy_ecs::system::assert_is_system(player_system);
+    /// # ens::system::assert_is_system(player_system);
     /// ```
     ///
     /// # See also
@@ -1067,8 +1067,8 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
-    /// # use bevy_ecs::query::QuerySingleError;
+    /// # use ens::prelude::*;
+    /// # use ens::query::QuerySingleError;
     /// # #[derive(Component)]
     /// # struct PlayerScore(i32);
     /// fn player_scoring_system(query: Query<&PlayerScore>) {
@@ -1084,7 +1084,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ///         }
     ///     }
     /// }
-    /// # bevy_ecs::system::assert_is_system(player_scoring_system);
+    /// # ens::system::assert_is_system(player_scoring_system);
     /// ```
     ///
     /// # See also
@@ -1114,7 +1114,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Component)]
     /// # struct Player;
@@ -1125,7 +1125,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ///     let mut health = query.single_mut();
     ///     health.0 += 1;
     /// }
-    /// # bevy_ecs::system::assert_is_system(regenerate_player_health_system);
+    /// # ens::system::assert_is_system(regenerate_player_health_system);
     /// ```
     ///
     /// # See also
@@ -1144,7 +1144,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Component)]
     /// # struct Player;
@@ -1155,7 +1155,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ///     let mut health = query.get_single_mut().expect("Error: Could not find a single player.");
     ///     health.0 += 1;
     /// }
-    /// # bevy_ecs::system::assert_is_system(regenerate_player_health_system);
+    /// # ens::system::assert_is_system(regenerate_player_health_system);
     /// ```
     ///
     /// # See also
@@ -1180,7 +1180,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// Here, the score is increased only if an entity with a `Player` component is present in the world:
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Component)]
     /// # struct Player;
@@ -1191,7 +1191,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ///         score.0 += 1;
     ///     }
     /// }
-    /// # bevy_ecs::system::assert_is_system(update_score_system);
+    /// # ens::system::assert_is_system(update_score_system);
     /// ```
     #[inline]
     pub fn is_empty(&self) -> bool {
@@ -1210,7 +1210,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Component)]
     /// # struct InRange;
@@ -1225,7 +1225,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ///         println!("Bam!")
     ///     }
     /// }
-    /// # bevy_ecs::system::assert_is_system(targeting_system);
+    /// # ens::system::assert_is_system(targeting_system);
     /// ```
     #[inline]
     pub fn contains(&self, entity: Entity) -> bool {
@@ -1253,8 +1253,8 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// ## Example
     ///
     /// ```rust
-    /// # use bevy_ecs::prelude::*;
-    /// # use bevy_ecs::system::QueryLens;
+    /// # use ens::prelude::*;
+    /// # use ens::system::QueryLens;
     /// #
     /// # #[derive(Component)]
     /// # struct A(usize);
@@ -1361,7 +1361,7 @@ impl<'w, 's, D: ReadOnlyQueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// `SelectedCharacter` resource.
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Resource)]
     /// # struct SelectedCharacter { entity: Entity }
@@ -1377,7 +1377,7 @@ impl<'w, 's, D: ReadOnlyQueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ///         println!("{}", selected_character.name);
     ///     }
     /// }
-    /// # bevy_ecs::system::assert_is_system(print_selected_character_name_system);
+    /// # ens::system::assert_is_system(print_selected_character_name_system);
     /// ```
     #[inline]
     pub fn get_inner(&self, entity: Entity) -> Result<ROQueryItem<'w, D>, QueryEntityError> {
@@ -1404,7 +1404,7 @@ impl<'w, 's, D: ReadOnlyQueryData, F: QueryFilter> Query<'w, 's, D, F> {
     /// that contains it:
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #
     /// # #[derive(Component)]
     /// # struct Player { name: String }
@@ -1414,7 +1414,7 @@ impl<'w, 's, D: ReadOnlyQueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ///         println!("Say hello to {}!", player.name);
     ///     }
     /// }
-    /// # bevy_ecs::system::assert_is_system(report_names_system);
+    /// # ens::system::assert_is_system(report_names_system);
     /// ```
     #[inline]
     pub fn iter_inner(&self) -> QueryIter<'w, 's, D::ReadOnly, F> {

@@ -99,7 +99,7 @@ type IdCursor = isize;
 /// It can also be obtained by calling [`EntityCommands::id`] or [`EntityWorldMut::id`].
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Component)]
 /// # struct SomeComponent;
 /// fn setup(mut commands: Commands) {
@@ -112,14 +112,14 @@ type IdCursor = isize;
 ///     let entity = world.spawn(SomeComponent).id();
 /// }
 /// #
-/// # bevy_ecs::system::assert_is_system(setup);
-/// # bevy_ecs::system::assert_is_system(exclusive_system);
+/// # ens::system::assert_is_system(setup);
+/// # ens::system::assert_is_system(exclusive_system);
 /// ```
 ///
 /// It can be used to refer to a specific entity to apply [`EntityCommands`], or to call [`Query::get`] (or similar methods) to access its components.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// #
 /// # #[derive(Component)]
 /// # struct Expired;
@@ -130,7 +130,7 @@ type IdCursor = isize;
 ///     }
 /// }
 /// #
-/// # bevy_ecs::system::assert_is_system(dispose_expired_food);
+/// # ens::system::assert_is_system(dispose_expired_food);
 /// ```
 ///
 /// [learn more]: crate::system::Query#entity-id-access
@@ -234,7 +234,7 @@ impl Entity {
     /// Initializing a collection (e.g. `array` or `Vec`) with a known size:
     ///
     /// ```no_run
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// // Create a new array of size 10 filled with invalid entity ids.
     /// let mut entities: [Entity; 10] = [Entity::PLACEHOLDER; 10];
     ///

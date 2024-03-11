@@ -1074,7 +1074,7 @@ mod tests {
                 (
                     "resmut_system (in set (resmut_system, resmut_system))".to_string(),
                     "resmut_system (in set (resmut_system, resmut_system))".to_string(),
-                    vec!["bevy_ecs::schedule::tests::system_ambiguity::R"],
+                    vec!["ens::schedule::tests::system_ambiguity::R"],
                 )
             );
         }

@@ -1,4 +1,4 @@
-use ens_tasks::{AsyncComputeTaskPool, ComputeTaskPool, IoTaskPool, TaskPoolBuilder};
+use crate::{AsyncComputeTaskPool, ComputeTaskPool, IoTaskPool, TaskPoolBuilder};
 
 /// Defines a simple way to determine how many threads to use given the number of remaining cores
 /// and number of total cores
@@ -91,10 +91,8 @@ impl TaskPoolOptions {
 
     /// Inserts the default thread pools into the given resource map based on the configured values
     pub fn create_default_pools(&self) {
-        let total_threads = ens_tasks::available_parallelism()
-            .clamp(self.min_total_threads, self.max_total_threads);
-        #[cfg(feature = "trace")]
-        log::trace!("Assigning {} cores to default task pools", total_threads);
+        let total_threads =
+            crate::available_parallelism().clamp(self.min_total_threads, self.max_total_threads);
 
         let mut remaining_threads = total_threads;
 
@@ -104,8 +102,6 @@ impl TaskPoolOptions {
                 .io
                 .get_number_of_threads(remaining_threads, total_threads);
 
-            #[cfg(feature = "trace")]
-            log::trace!("IO Threads: {}", io_threads);
             remaining_threads = remaining_threads.saturating_sub(io_threads);
 
             IoTaskPool::get_or_init(|| {
@@ -122,8 +118,6 @@ impl TaskPoolOptions {
                 .async_compute
                 .get_number_of_threads(remaining_threads, total_threads);
 
-            #[cfg(feature = "trace")]
-            log::trace!("Async Compute Threads: {}", async_compute_threads);
             remaining_threads = remaining_threads.saturating_sub(async_compute_threads);
 
             AsyncComputeTaskPool::get_or_init(|| {
@@ -140,9 +134,6 @@ impl TaskPoolOptions {
             let compute_threads = self
                 .compute
                 .get_number_of_threads(remaining_threads, total_threads);
-
-            #[cfg(feature = "trace")]
-            log::trace!("Compute Threads: {}", compute_threads);
 
             ComputeTaskPool::get_or_init(|| {
                 TaskPoolBuilder::default()

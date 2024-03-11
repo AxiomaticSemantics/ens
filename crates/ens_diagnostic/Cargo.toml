@@ -21,7 +21,6 @@ ens_time = { path = "../ens_time", version = "0.14.0-dev" }
 ens_utils = { path = "../ens_utils", version = "0.14.0-dev" }
 
 const-fnv1a-hash = "1.1.0"
-env_logger = "0.11.3"
 log = "0.4.21"
 
 [lints]

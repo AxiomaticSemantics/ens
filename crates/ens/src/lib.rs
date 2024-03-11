@@ -3,14 +3,13 @@
 #![doc = include_str!("../README.md")]
 
 #[cfg(target_pointer_width = "16")]
-compile_error!("bevy_ecs cannot safely compile for a 16-bit platform.");
+compile_error!("ens cannot safely compile for a 16-bit platform.");
 
 pub mod archetype;
 pub mod bundle;
 pub mod change_detection;
 pub mod component;
 pub mod entity;
-pub mod event;
 pub mod identifier;
 pub mod query;
 pub mod removal_detection;
@@ -18,6 +17,9 @@ pub mod schedule;
 pub mod storage;
 pub mod system;
 pub mod world;
+
+#[cfg(feature = "events")]
+pub mod event;
 
 pub use ens_ptr as ptr;
 
@@ -29,7 +31,7 @@ pub mod prelude {
         change_detection::{DetectChanges, DetectChangesMut, Mut, Ref},
         component::Component,
         entity::Entity,
-        event::{Event, EventReader, EventWriter, Events},
+        //event::{Event, EventReader, EventWriter, Events},
         query::{Added, AnyOf, Changed, Has, Or, QueryBuilder, QueryState, With, Without},
         removal_detection::RemovedComponents,
         schedule::{
@@ -43,6 +45,9 @@ pub mod prelude {
         },
         world::{EntityMut, EntityRef, EntityWorldMut, FromWorld, World},
     };
+
+    #[cfg(feature = "events")]
+    pub use crate::event::{Event, EventReader, EventWriter, Events};
 
     #[cfg(feature = "entity_mapper")]
     pub use crate::entity::EntityMapper;
@@ -1410,7 +1415,7 @@ mod tests {
 
     #[test]
     #[should_panic(
-        expected = "Attempted to access or drop non-send resource bevy_ecs::tests::NonSendA from thread"
+        expected = "Attempted to access or drop non-send resource ens::tests::NonSendA from thread"
     )]
     fn non_send_resource_drop_from_different_thread() {
         let mut world = World::default();

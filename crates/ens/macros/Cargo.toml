@@ -1,7 +1,7 @@
 [package]
 name = "ens_macros"
 version = "0.14.0-dev"
-description = "Bevy ECS Macros"
+description = "Ens ECS Macros"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 

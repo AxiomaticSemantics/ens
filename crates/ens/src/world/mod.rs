@@ -283,7 +283,7 @@ impl World {
     /// the `World` using [`World::init_component`].
     ///
     /// ```
-    /// use bevy_ecs::prelude::*;
+    /// use ens::prelude::*;
     ///
     /// let mut world = World::new();
     ///
@@ -309,7 +309,7 @@ impl World {
     /// to check for entity existence instead of implicitly panic-ing.
     ///
     /// ```
-    /// use bevy_ecs::{component::Component, world::World};
+    /// use ens::{component::Component, world::World};
     ///
     /// #[derive(Component)]
     /// struct Position {
@@ -343,7 +343,7 @@ impl World {
     /// to check for entity existence instead of implicitly panic-ing.
     ///
     /// ```
-    /// use bevy_ecs::{component::Component, world::World};
+    /// use ens::{component::Component, world::World};
     ///
     /// #[derive(Component)]
     /// struct Position {
@@ -382,7 +382,7 @@ impl World {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # let mut world = World::new();
     /// # let id1 = world.spawn_empty().id();
     /// # let id2 = world.spawn_empty().id();
@@ -391,7 +391,7 @@ impl World {
     /// ```
     ///
     /// ```should_panic
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # let mut world = World::new();
     /// # let id1 = world.spawn_empty().id();
     /// # let id2 = world.spawn_empty().id();
@@ -425,7 +425,7 @@ impl World {
     /// Disjoint mutable access.
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # let mut world = World::new();
     /// # let id1 = world.spawn_empty().id();
     /// # let id2 = world.spawn_empty().id();
@@ -436,7 +436,7 @@ impl World {
     /// Trying to access the same entity multiple times will fail.
     ///
     /// ```should_panic
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # let mut world = World::new();
     /// # let id = world.spawn_empty().id();
     /// world.many_entities_mut([id, id]);
@@ -1775,7 +1775,7 @@ impl World {
     ) -> Option<SendBatchIds<E>> {
         let Some(mut events_resource) = self.get_resource_mut::<Events<E>>() else {
             log::error!(
-                "Unable to send event `{}`\n\tEvent must be added to the app with `add_event()`\n\thttps://docs.rs/bevy/*/bevy/app/struct.App.html#method.add_event ",
+                "Unable to send event `{}`\n\tEvent must be added to the app with `add_event()`",
                 std::any::type_name::<E>()
             );
             return None;
@@ -1935,7 +1935,7 @@ impl World {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// // This function runs an update loop repeatedly, allowing each iteration of the loop
     /// // to react to changes made in the previous loop iteration.
     /// fn update_loop(
@@ -2296,7 +2296,7 @@ impl World {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::{prelude::*, schedule::ScheduleLabel};
+    /// # use ens::{prelude::*, schedule::ScheduleLabel};
     /// # #[derive(ScheduleLabel, Debug, Clone, Copy, PartialEq, Eq, Hash)]
     /// # pub struct MySchedule;
     /// # #[derive(Resource)]

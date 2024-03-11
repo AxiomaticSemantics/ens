@@ -31,7 +31,7 @@ pub mod prelude {
 
 use ens::event::{signal_event_update_system, EventUpdateSignal, EventUpdates};
 use ens::prelude::*;
-use ens_app::{prelude::*, First};
+use ens_app::{prelude::*, PreUpdate};
 use std::time::{Duration, Instant};
 
 /// Adds time functionality to Apps.
@@ -45,17 +45,9 @@ pub struct TimeSystem;
 
 impl Plugin for TimePlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<Time>()
-            .init_resource::<Time<Real>>()
+        app.init_resource::<Time<Real>>()
             .init_resource::<TimeUpdateStrategy>()
-            .add_systems(First, time_system.in_set(TimeSystem)); //.add_systems(RunFixedMainLoop, run_fixed_main_schedule);
-
-        // ensure the events are not dropped until `FixedMain` systems can observe them
-        app.init_resource::<EventUpdateSignal>().add_systems(
-            First,
-            ens::event::reset_event_update_signal_system.after(EventUpdates),
-        );
-        //.add_systems(FixedPostUpdate, signal_event_update_system);
+            .add_systems(PreUpdate, time_system.in_set(TimeSystem));
     }
 }
 

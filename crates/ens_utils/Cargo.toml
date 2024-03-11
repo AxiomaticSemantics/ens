@@ -12,7 +12,7 @@ keywords = ["bevy"]
 ens_utils_proc_macros = { version = "0.14.0-dev", path = "macros" }
 
 ahash = "0.8.7"
-hashbrown = { version = "0.14", features = ["serde"] }
+hashbrown = { version = "0.14", features = [] }
 thread_local = "1.0"
 
 [dev-dependencies]

@@ -8,6 +8,7 @@ pub mod prelude {
     pub use crate::default;
 }
 
+#[cfg(feature = "futures")]
 pub mod futures;
 pub mod label;
 mod short_names;
@@ -17,6 +18,7 @@ pub mod syncunsafecell;
 
 mod cow_arc;
 mod default;
+#[cfg(feature = "float_ord")]
 mod float_ord;
 pub mod intern;
 mod once;
@@ -26,6 +28,7 @@ pub use ahash::{AHasher, RandomState};
 pub use cow_arc::*;
 pub use default::default;
 pub use ens_utils_proc_macros::*;
+#[cfg(feature = "float_ord")]
 pub use float_ord::*;
 pub use hashbrown;
 pub use parallel_queue::*;
@@ -380,7 +383,7 @@ impl std::hash::Hasher for NoOpHasher {
 /// # Examples
 ///
 /// ```
-/// # use bevy_utils::OnDrop;
+/// # use ens_utils::OnDrop;
 /// # fn test_panic(do_panic: bool, log: impl FnOnce(&str)) {
 /// // This will print a message when the variable `_catch` gets dropped,
 /// // even if a panic occurs before we reach the end of this scope.
@@ -422,45 +425,6 @@ impl<F: FnOnce()> Drop for OnDrop<F> {
         // SAFETY: We may move out of `self`, since this instance can never be observed after it's dropped.
         let callback = unsafe { ManuallyDrop::take(&mut self.callback) };
         callback();
-    }
-}
-
-#[cfg(feature = "trace")]
-/// Calls the [`tracing::info!`] macro on a value.
-pub fn info<T: Debug>(data: T) {
-    tracing::info!("{:?}", data);
-}
-
-#[cfg(feature = "trace")]
-/// Calls the [`tracing::debug!`] macro on a value.
-pub fn dbg<T: Debug>(data: T) {
-    tracing::debug!("{:?}", data);
-}
-
-#[cfg(feature = "trace")]
-/// Processes a [`Result`] by calling the [`tracing::warn!`] macro in case of an [`Err`] value.
-pub fn warn<E: Debug>(result: Result<(), E>) {
-    if let Err(warn) = result {
-        tracing::warn!("{:?}", warn);
-    }
-}
-
-#[cfg(feature = "trace")]
-/// Processes a [`Result`] by calling the [`tracing::error!`] macro in case of an [`Err`] value.
-pub fn error<E: Debug>(result: Result<(), E>) {
-    if let Err(error) = result {
-        tracing::error!("{:?}", error);
-    }
-}
-
-/// Like [`tracing::trace`], but conditional on cargo feature `detailed_trace`.
-#[cfg(feature = "trace")]
-#[macro_export]
-macro_rules! detailed_trace {
-    ($($tts:tt)*) => {
-        if cfg!(detailed_trace) {
-            bevy_utils::tracing::trace!($($tts)*);
-        }
     }
 }
 

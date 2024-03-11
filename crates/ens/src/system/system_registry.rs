@@ -163,7 +163,7 @@ impl World {
     /// ## Running a system
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// fn increment(mut counter: Local<u8>) {
     ///    *counter += 1;
     ///    println!("{}", *counter);
@@ -180,7 +180,7 @@ impl World {
     /// ## Change detection
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// #[derive(Resource, Default)]
     /// struct ChangeDetector;
     ///
@@ -204,7 +204,7 @@ impl World {
     /// ## Getting system output
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     ///
     /// #[derive(Resource)]
     /// struct PlayerScore(i32);
@@ -251,7 +251,7 @@ impl World {
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// fn increment(In(increment_by): In<u8>, mut counter: Local<u8>) -> u8 {
     ///   *counter += increment_by;
     ///   *counter

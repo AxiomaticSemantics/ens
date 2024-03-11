@@ -4,7 +4,7 @@ mod adapters;
 pub use adapters::*;
 
 /// [`ParallelIterator`] closely emulates the `std::iter::Iterator`
-/// interface. However, it uses `bevy_task` to compute batches in parallel.
+/// interface. However, it uses `ens_task` to compute batches in parallel.
 ///
 /// Note that the overhead of [`ParallelIterator`] is high relative to some
 /// workloads. In particular, if the batch size is too small or task being

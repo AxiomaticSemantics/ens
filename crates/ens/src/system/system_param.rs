@@ -41,14 +41,14 @@ use std::{
 /// The following list shows the most common [`SystemParam`]s and which lifetime they require
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Resource)]
 /// # struct SomeResource;
 /// # #[derive(Event)]
 /// # struct SomeEvent;
 /// # #[derive(Resource)]
 /// # struct SomeOtherResource;
-/// # use bevy_ecs::system::SystemParam;
+/// # use ens::system::SystemParam;
 /// # #[derive(SystemParam)]
 /// # struct ParamsExample<'w, 's> {
 /// #    query:
@@ -75,11 +75,11 @@ use std::{
 /// # Example
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Resource)]
 /// # struct SomeResource;
 /// use std::marker::PhantomData;
-/// use bevy_ecs::system::SystemParam;
+/// use ens::system::SystemParam;
 ///
 /// #[derive(SystemParam)]
 /// struct MyParam<'w, Marker: 'static> {
@@ -91,7 +91,7 @@ use std::{
 ///     // Access the resource through `param.foo`
 /// }
 ///
-/// # bevy_ecs::system::assert_is_system(my_system::<()>);
+/// # ens::system::assert_is_system(my_system::<()>);
 /// ```
 ///
 /// # Generic `SystemParam`s
@@ -251,7 +251,7 @@ fn assert_component_access_compatibility(
         .map(|component_id| world.components.get_info(component_id).unwrap().name())
         .collect::<Vec<&str>>();
     let accesses = conflicting_components.join(", ");
-    panic!("error[B0001]: Query<{query_type}, {filter_type}> in system {system_name} accesses component(s) {accesses} in a way that conflicts with a previous system parameter. Consider using `Without<T>` to create disjoint Queries or merging conflicting Queries into a `ParamSet`. See: https://bevyengine.org/learn/errors/#b0001");
+    panic!("error[B0001]: Query<{query_type}, {filter_type}> in system {system_name} accesses component(s) {accesses} in a conflicting manner. See: https://bevyengine.org/learn/errors/#b0001");
 }
 
 /// A collection of potentially conflicting [`SystemParam`]s allowed by disjoint access.
@@ -269,7 +269,7 @@ fn assert_component_access_compatibility(
 /// which is not allowed due to rust's mutability rules.
 ///
 /// ```should_panic
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// #
 /// # #[derive(Component)]
 /// # struct Health;
@@ -298,7 +298,7 @@ fn assert_component_access_compatibility(
 /// which leverages the borrow checker to ensure that only one of the contained parameters are accessed at a given time.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// #
 /// # #[derive(Component)]
 /// # struct Health;
@@ -327,13 +327,13 @@ fn assert_component_access_compatibility(
 ///         // Do even fancier stuff here...
 ///     }
 /// }
-/// # bevy_ecs::system::assert_is_system(fancy_system);
+/// # ens::system::assert_is_system(fancy_system);
 /// ```
 ///
 /// Of course, `ParamSet`s can be used with any kind of `SystemParam`, not just [queries](Query).
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// #
 /// # #[derive(Event)]
 /// # struct MyEvent;
@@ -361,7 +361,7 @@ fn assert_component_access_compatibility(
 ///     // ...
 ///     # let _entities = entities;
 /// }
-/// # bevy_ecs::system::assert_is_system(event_system);
+/// # ens::system::assert_is_system(event_system);
 /// ```
 pub struct ParamSet<'w, 's, T: SystemParam> {
     param_states: &'s mut T::State,
@@ -383,7 +383,7 @@ impl_param_set!();
 /// ```
 /// # let mut world = World::default();
 /// # let mut schedule = Schedule::default();
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// #[derive(Resource)]
 /// struct MyResource { value: u32 }
 ///
@@ -411,7 +411,7 @@ impl_param_set!();
 /// This will fail to compile since `RefCell` is `!Sync`.
 /// ```compile_fail
 /// # use std::cell::RefCell;
-/// # use bevy_ecs::system::Resource;
+/// # use ens::system::Resource;
 ///
 /// #[derive(Resource)]
 /// struct NotSync {
@@ -422,8 +422,8 @@ impl_param_set!();
 /// This will compile since the `RefCell` is wrapped with `SyncCell`.
 /// ```
 /// # use std::cell::RefCell;
-/// # use bevy_ecs::system::Resource;
-/// use bevy_utils::synccell::SyncCell;
+/// # use ens::system::Resource;
+/// use ens_utils::synccell::SyncCell;
 ///
 /// #[derive(Resource)]
 /// struct ActuallySync {
@@ -450,7 +450,7 @@ unsafe impl<'a, T: Resource> SystemParam for Res<'a, T> {
         let combined_access = system_meta.component_access_set.combined_access();
         assert!(
             !combined_access.has_write(component_id),
-            "error[B0002]: Res<{}> in system {} conflicts with a previous ResMut<{0}> access. Consider removing the duplicate access. See: https://bevyengine.org/learn/errors/#b0002",
+            "error[B0002]: Res<{}> in system {} conflicts with a previous ResMut<{0}> access. See: https://bevyengine.org/learn/errors/#b0002",
             std::any::type_name::<T>(),
             system_meta.name,
         );
@@ -542,11 +542,11 @@ unsafe impl<'a, T: Resource> SystemParam for ResMut<'a, T> {
         let combined_access = system_meta.component_access_set.combined_access();
         if combined_access.has_write(component_id) {
             panic!(
-                "error[B0002]: ResMut<{}> in system {} conflicts with a previous ResMut<{0}> access. Consider removing the duplicate access. See: https://bevyengine.org/learn/errors/#b0002",
+                "error[B0002]: ResMut<{}> in system {} conflicts with a previous ResMut<{0}> access. See https://bevyengine.org/learn/errors/#b0002",
                 std::any::type_name::<T>(), system_meta.name);
         } else if combined_access.has_read(component_id) {
             panic!(
-                "error[B0002]: ResMut<{}> in system {} conflicts with a previous Res<{0}> access. Consider removing the duplicate access. See: https://bevyengine.org/learn/errors/#b0002",
+                "error[B0002]: ResMut<{}> in system {} conflicts with a previous Res<{0}> access. See: https://bevyengine.org/learn/errors/#b0002",
                 std::any::type_name::<T>(), system_meta.name);
         }
         system_meta
@@ -676,7 +676,7 @@ unsafe impl SystemParam for &'_ World {
 /// # Examples
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # let world = &mut World::default();
 /// fn write_to_local(mut local: Local<usize>) {
 ///     *local = 42;
@@ -699,8 +699,8 @@ unsafe impl SystemParam for &'_ World {
 /// To add configuration to a system, convert a capturing closure into the system instead:
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
-/// # use bevy_ecs::system::assert_is_system;
+/// # use ens::prelude::*;
+/// # use ens::system::assert_is_system;
 /// struct Config(u32);
 /// #[derive(Resource)]
 /// struct MyU32Wrapper(u32);
@@ -805,7 +805,7 @@ pub trait SystemBuffer: FromWorld + Send + 'static {
 /// or which otherwise take up a small portion of a system's run-time.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// // Tracks whether or not there is a threat the player should be aware of.
 /// #[derive(Resource, Default)]
 /// pub struct Alarm(bool);
@@ -825,7 +825,7 @@ pub trait SystemBuffer: FromWorld + Send + 'static {
 ///
 /// # impl Criminal { pub fn is_threat(&self, _: &Settlement) -> bool { true } }
 ///
-/// use bevy_ecs::system::{Deferred, SystemBuffer, SystemMeta};
+/// use ens::system::{Deferred, SystemBuffer, SystemMeta};
 ///
 /// // Uses deferred mutations to allow signalling the alarm from multiple systems in parallel.
 /// #[derive(Resource, Default)]
@@ -1039,7 +1039,7 @@ unsafe impl<'a, T: 'static> SystemParam for NonSend<'a, T> {
         let combined_access = system_meta.component_access_set.combined_access();
         assert!(
             !combined_access.has_write(component_id),
-            "error[B0002]: NonSend<{}> in system {} conflicts with a previous mutable resource access ({0}). Consider removing the duplicate access. See: https://bevyengine.org/learn/errors/#b0002",
+            "error[B0002]: NonSend<{}> in system {} conflicts with a previous mutable resource access ({0}). See: https://bevyengine.org/learn/errors/#b0002",
             std::any::type_name::<T>(),
             system_meta.name,
         );
@@ -1128,11 +1128,11 @@ unsafe impl<'a, T: 'static> SystemParam for NonSendMut<'a, T> {
         let combined_access = system_meta.component_access_set.combined_access();
         if combined_access.has_write(component_id) {
             panic!(
-                "error[B0002]: NonSendMut<{}> in system {} conflicts with a previous mutable resource access ({0}). Consider removing the duplicate access. See: https://bevyengine.org/learn/errors/#b0002",
+                "error[B0002]: NonSendMut<{}> in system {} conflicts with a previous mutable resource access ({0}). See: https://bevyengine.org/learn/errors/#b0002",
                 std::any::type_name::<T>(), system_meta.name);
         } else if combined_access.has_read(component_id) {
             panic!(
-                "error[B0002]: NonSendMut<{}> in system {} conflicts with a previous immutable resource access ({0}). Consider removing the duplicate access. See: https://bevyengine.org/learn/errors/#b0002",
+                "error[B0002]: NonSendMut<{}> in system {} conflicts with a previous immutable resource access ({0}). See: https://bevyengine.org/learn/errors/#b0002",
                 std::any::type_name::<T>(), system_meta.name);
         }
         system_meta
@@ -1417,8 +1417,8 @@ pub mod lifetimeless {
 /// derive:
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
-/// use bevy_ecs::system::{SystemParam, StaticSystemParam};
+/// # use ens::prelude::*;
+/// use ens::system::{SystemParam, StaticSystemParam};
 /// #[derive(SystemParam)]
 /// struct GenericParam<'w,'s, T: SystemParam + 'static> {
 ///     field: StaticSystemParam<'w, 's, T>,
@@ -1426,7 +1426,7 @@ pub mod lifetimeless {
 /// fn do_thing_generically<T: SystemParam + 'static>(t: StaticSystemParam<T>) {}
 ///
 /// fn check_always_is_system<T: SystemParam + 'static>(){
-///     bevy_ecs::system::assert_is_system(do_thing_generically::<T>);
+///     ens::system::assert_is_system(do_thing_generically::<T>);
 /// }
 /// ```
 /// Note that in a real case you'd generally want
@@ -1441,8 +1441,8 @@ pub mod lifetimeless {
 ///
 /// The method which doesn't use this type will not compile:
 /// ```compile_fail
-/// # use bevy_ecs::prelude::*;
-/// # use bevy_ecs::system::{SystemParam, StaticSystemParam};
+/// # use ens::prelude::*;
+/// # use ens::system::{SystemParam, StaticSystemParam};
 ///
 /// fn do_thing_generically<T: SystemParam + 'static>(t: T) {}
 ///
@@ -1453,7 +1453,7 @@ pub mod lifetimeless {
 ///     phantom: core::marker::PhantomData<&'w &'s ()>
 /// }
 /// # fn check_always_is_system<T: SystemParam + 'static>(){
-/// #    bevy_ecs::system::assert_is_system(do_thing_generically::<T>);
+/// #    ens::system::assert_is_system(do_thing_generically::<T>);
 /// # }
 /// ```
 ///
@@ -1538,7 +1538,7 @@ unsafe impl<T: ?Sized> ReadOnlySystemParam for PhantomData<T> {}
 mod tests {
     use super::*;
     use crate::{
-        self as ens, // Necessary for the `SystemParam` Derive when used inside `bevy_ecs`.
+        self as ens, // Necessary for the `SystemParam` Derive when used inside `ens`.
         system::{assert_is_system, Query},
     };
     use std::{cell::RefCell, marker::PhantomData};

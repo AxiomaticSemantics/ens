@@ -5,12 +5,12 @@ edition = "2021"
 categories = ["game-engines", "graphics", "gui", "rendering"]
 description = "A refreshingly simple data-driven game engine and app framework"
 #exclude = ["assets/", "tools/", ".github/", "crates/"]
-homepage = "https://bevyengine.org"
+homepage = "https://github.com/AxiomaticSematnics/ens"
 keywords = ["game", "engine", "gamedev", "graphics", "bevy"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/bevyengine/bevy"
-documentation = "https://docs.rs/bevy"
+repository = "https://github.com/AxiomaticSemantics/ens"
+documentation = "https://docs.rs/ens"
 rust-version = "1.76.0"
 exclude = [
   "benches",
@@ -21,11 +21,10 @@ members = [
   "crates/*",
   "tools/ci",
   "tools/build-templated-pages",
-  "errors",
 ]
 
 [package]
-name = "ens_dist"
+name = "ens_ecs"
 
 [workspace.lints.clippy]
 type_complexity = "allow"
@@ -47,40 +46,6 @@ missing_docs = "warn"
 
 [lints]
 workspace = true
-
-[features]
-default = ["multi-threaded"]
-
-# Force dynamic linking, which improves iterative compile times
-dynamic_linking = ["dep:ens_dylib", "ens_internal/dynamic_linking"]
-
-# Plugin for dynamic loading (using [libloading](https://crates.io/crates/libloading))
-ens_dynamic_plugin = ["ens_internal/ens_dynamic_plugin"]
-
-# Enable serialization support through serde
-serialize = ["ens_internal/serialize"]
-
-# Enables multithreaded parallelism in the engine. Disabling it forces all engine tasks to run on a single thread.
-multi-threaded = ["ens_internal/multi-threaded"]
-
-# Use async-io's implementation of block_on instead of futures-lite's implementation. This is preferred if your application uses async-io.
-async-io = ["ens_internal/async-io"]
-
-[dependencies]
-ens_dylib = { path = "crates/ens_dylib", version = "0.14.0-dev", default-features = false, optional = true }
-ens_internal = { path = "crates/ens_internal", version = "0.14.0-dev", default-features = false }
-
-[dev-dependencies]
-#rand = "0.8.0"
-#ron = "0.8.0"
-#flate2 = "1.0"
-#serde = { version = "1", features = ["derive"] }
-#bytemuck = "1.7"
-# Needed to poll Task examples
-#futures-lite = "2.0.1"
-#crossbeam-channel = "0.5.0"
-#argh = "0.1.12"
-#thiserror = "1.0"
 
 # Application
 [[example]]
@@ -401,16 +366,6 @@ name = "System Parameter"
 description = "Illustrates creating custom system parameters with `SystemParam`"
 category = "ECS (Entity Component System)"
 
-[[example]]
-name = "system_stepping"
-path = "examples/ecs/system_stepping.rs"
-doc-scrape-examples = true
-
-[package.metadata.example.system_stepping]
-name = "System Stepping"
-description = "Demonstrate stepping through systems in order of execution"
-category = "ECS (Entity Component System)"
-
 # Time
 [[example]]
 name = "time"
@@ -419,15 +374,6 @@ path = "examples/time/time.rs"
 [package.metadata.example.time]
 name = "Time handling"
 description = "Explains how Time is handled in ECS"
-category = "Time"
-
-[[example]]
-name = "virtual_time"
-path = "examples/time/virtual_time.rs"
-
-[package.metadata.example.virtual_time]
-name = "Virtual time"
-description = "Shows how `Time<Virtual>` can be used to pause, resume, slow down and speed up a game."
 category = "Time"
 
 [[example]]

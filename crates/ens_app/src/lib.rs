@@ -7,12 +7,15 @@ mod plugin;
 mod plugin_group;
 mod schedule_runner;
 
+mod task_pool_plugin;
+
 pub use app::*;
 pub use ens_derive::DynamicPlugin;
 pub use main_schedule::*;
 pub use plugin::*;
 pub use plugin_group::*;
 pub use schedule_runner::*;
+pub use task_pool_plugin::*;
 
 #[allow(missing_docs)]
 pub mod prelude {
@@ -20,17 +23,9 @@ pub mod prelude {
     pub use crate::{
         app::App,
         main_schedule::{
-            //First, FixedFirst, FixedLast, FixedPostUpdate, FixedPreUpdate, FixedUpdate,
-            Last,
-            Main,
-            PostStartup,
-            PostUpdate,
-            PreStartup,
-            PreUpdate,
-            Startup,
-            StateTransition,
-            Update,
+            Main, PostStartup, PostUpdate, PreStartup, PreUpdate, Startup, StateTransition, Update,
         },
+        task_pool_plugin::TaskPoolPlugin,
         DynamicPlugin, Plugin, PluginGroup,
     };
 }

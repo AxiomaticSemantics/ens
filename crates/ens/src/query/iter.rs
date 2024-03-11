@@ -447,7 +447,7 @@ where
 /// The following example shows how to traverse the iterator when the query items are read-only.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Component)]
 /// # struct ComponentA;
 /// #
@@ -461,7 +461,7 @@ where
 /// The following example shows how `fetch_next` should be called with a `while let` loop to traverse the iterator when the query items are mutable.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// # #[derive(Component)]
 /// # struct ComponentA;
 /// #

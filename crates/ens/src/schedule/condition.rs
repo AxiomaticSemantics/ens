@@ -22,8 +22,8 @@ pub type BoxedCondition<In = ()> = Box<dyn ReadOnlySystem<In = In, Out = bool>>;
 /// but usually have to be specified when passing a condition to a function.
 ///
 /// ```
-/// # use bevy_ecs::schedule::Condition;
-/// # use bevy_ecs::system::IntoSystem;
+/// # use ens::schedule::Condition;
+/// # use ens::system::IntoSystem;
 /// fn not_condition<Marker>(a: impl Condition<Marker>) -> impl Condition<()> {
 ///    IntoSystem::into_system(a.map(|x| !x))
 /// }
@@ -32,7 +32,7 @@ pub type BoxedCondition<In = ()> = Box<dyn ReadOnlySystem<In = In, Out = bool>>;
 /// # Examples
 /// A condition that returns true every other time it's called.
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// fn every_other_time() -> impl Condition<()> {
 ///     IntoSystem::into_system(|mut flag: Local<bool>| {
 ///         *flag = !*flag;
@@ -56,7 +56,7 @@ pub type BoxedCondition<In = ()> = Box<dyn ReadOnlySystem<In = In, Out = bool>>;
 /// A condition that takes a bool as an input and returns it unchanged.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
+/// # use ens::prelude::*;
 /// fn identity() -> impl Condition<(), bool> {
 ///     IntoSystem::into_system(|In(x)| x)
 /// }
@@ -80,7 +80,7 @@ pub trait Condition<Marker, In = ()>: sealed::Condition<Marker, In> {
     /// # Examples
     ///
     /// ```should_panic
-    /// use bevy_ecs::prelude::*;
+    /// use ens::prelude::*;
     ///
     /// #[derive(Resource, PartialEq)]
     /// struct R(u32);
@@ -99,7 +99,7 @@ pub trait Condition<Marker, In = ()>: sealed::Condition<Marker, In> {
     /// Use `.and_then()` to avoid checking the condition.
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource, PartialEq)]
     /// # struct R(u32);
     /// # let mut app = Schedule::default();
@@ -131,7 +131,7 @@ pub trait Condition<Marker, In = ()>: sealed::Condition<Marker, In> {
     /// # Examples
     ///
     /// ```
-    /// use bevy_ecs::prelude::*;
+    /// use ens::prelude::*;
     ///
     /// #[derive(Resource, PartialEq)]
     /// struct A(u32);
@@ -192,7 +192,7 @@ mod sealed {
     }
 }
 
-/// A collection of [run conditions](Condition) that may be useful in any bevy app.
+/// A collection of [run conditions](Condition) that may be useful in any Ens app.
 pub mod common_conditions {
     use super::NotSystem;
     use crate::{
@@ -210,7 +210,7 @@ pub mod common_conditions {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource, Default)]
     /// # struct Counter(u8);
     /// # let mut app = Schedule::default();
@@ -251,7 +251,7 @@ pub mod common_conditions {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource, Default)]
     /// # struct Counter(u8);
     /// # let mut app = Schedule::default();
@@ -290,7 +290,7 @@ pub mod common_conditions {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource, Default, PartialEq)]
     /// # struct Counter(u8);
     /// # let mut app = Schedule::default();
@@ -328,7 +328,7 @@ pub mod common_conditions {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource, Default, PartialEq)]
     /// # struct Counter(u8);
     /// # let mut app = Schedule::default();
@@ -371,7 +371,7 @@ pub mod common_conditions {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource, Default)]
     /// # struct Counter(u8);
     /// # let mut app = Schedule::default();
@@ -421,7 +421,7 @@ pub mod common_conditions {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource, Default)]
     /// # struct Counter(u8);
     /// # let mut app = Schedule::default();
@@ -475,7 +475,7 @@ pub mod common_conditions {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource, Default)]
     /// # struct Counter(u8);
     /// # let mut app = Schedule::default();
@@ -536,7 +536,7 @@ pub mod common_conditions {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource, Default)]
     /// # struct Counter(u8);
     /// # let mut app = Schedule::default();
@@ -606,7 +606,7 @@ pub mod common_conditions {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource, Default)]
     /// # struct Counter(u8);
     /// # let mut app = Schedule::default();
@@ -661,7 +661,7 @@ pub mod common_conditions {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource, Default)]
     /// # struct Counter(u8);
     /// # let mut app = Schedule::default();
@@ -706,7 +706,7 @@ pub mod common_conditions {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource, Default)]
     /// # struct Counter(u8);
     /// # let mut app = Schedule::default();
@@ -775,7 +775,7 @@ pub mod common_conditions {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource, Default)]
     /// # struct Counter(u8);
     /// # let mut app = Schedule::default();
@@ -828,14 +828,14 @@ pub mod common_conditions {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource, Default)]
     /// # struct Counter(u8);
     /// # let mut app = Schedule::default();
     /// # let mut world = World::new();
     /// # world.init_resource::<Counter>();
     /// # world.init_resource::<Events<MyEvent>>();
-    /// # app.add_systems(bevy_ecs::event::event_update_system::<MyEvent>.before(my_system));
+    /// # app.add_systems(ens::event::event_update_system::<MyEvent>.before(my_system));
     ///
     /// app.add_systems(
     ///     my_system.run_if(on_event::<MyEvent>()),
@@ -872,7 +872,7 @@ pub mod common_conditions {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource, Default)]
     /// # struct Counter(u8);
     /// # let mut app = Schedule::default();
@@ -919,7 +919,7 @@ pub mod common_conditions {
     /// # Example
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Resource, Default)]
     /// # struct Counter(u8);
     /// # let mut app = Schedule::default();

@@ -1,5 +1,4 @@
-//! Contains error types returned by bevy's schedule.
-
+///! Contains error types returned by ens's schedule.
 use thiserror::Error;
 
 use crate::schedule::InternedScheduleLabel;

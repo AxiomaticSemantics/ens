@@ -15,14 +15,10 @@ use ens::{
 /// * [`PostStartup`]
 ///
 /// Then it will run:
-/// * [`First`]
 /// * [`PreUpdate`]
 /// * [`StateTransition`]
-/// * [`RunFixedMainLoop`]
-///     * This will run [`FixedMain`] zero to many times, based on how much time has elapsed.
 /// * [`Update`]
 /// * [`PostUpdate`]
-/// * [`Last`]
 ///
 #[derive(ScheduleLabel, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Main;
@@ -44,12 +40,6 @@ pub struct Startup;
 /// See the [`Main`] schedule for some details about how schedules are run.
 #[derive(ScheduleLabel, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PostStartup;
-
-/// Runs first in the schedule.
-///
-/// See the [`Main`] schedule for some details about how schedules are run.
-#[derive(ScheduleLabel, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct First;
 
 /// The schedule that contains logic that must run before [`Update`]. For example, a system that reads raw keyboard
 /// input OS events into an `Events` resource. This enables systems in [`Update`] to consume the events from the `Events`
@@ -85,12 +75,6 @@ pub struct Update;
 #[derive(ScheduleLabel, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PostUpdate;
 
-/// Runs last in the schedule.
-///
-/// See the [`Main`] schedule for some details about how schedules are run.
-#[derive(ScheduleLabel, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Last;
-
 /// Defines the schedules to be run for the [`Main`] schedule, including
 /// their order.
 #[derive(Resource, Debug)]
@@ -105,13 +89,12 @@ impl Default for MainScheduleOrder {
     fn default() -> Self {
         Self {
             labels: vec![
-                First.intern(),
+                //First.intern(),
                 PreUpdate.intern(),
-                StateTransition.intern(),
-                //RunFixedMainLoop.intern(),
+                //StateTransition.intern(),
                 Update.intern(),
                 PostUpdate.intern(),
-                Last.intern(),
+                //Last.intern(),
             ],
             startup_labels: vec![PreStartup.intern(), Startup.intern(), PostStartup.intern()],
         }
@@ -146,15 +129,16 @@ impl MainScheduleOrder {
 
 impl Main {
     /// A system that runs the "main schedule"
-    pub fn run_main(world: &mut World, mut run_at_least_once: Local<bool>) {
-        if !*run_at_least_once {
+    pub fn run_main(world: &mut World) {
+        //, mut run_at_least_once: Local<bool>) {
+        /*if !*run_at_least_once {
             world.resource_scope(|world, order: Mut<MainScheduleOrder>| {
                 for &label in &order.startup_labels {
                     let _ = world.try_run_schedule(label);
                 }
             });
             *run_at_least_once = true;
-        }
+        }*/
 
         world.resource_scope(|world, order: Mut<MainScheduleOrder>| {
             for &label in &order.labels {
@@ -172,26 +156,8 @@ impl Plugin for MainSchedulePlugin {
         // simple "facilitator" schedules benefit from simpler single threaded scheduling
         let mut main_schedule = Schedule::new(Main);
         main_schedule.set_executor_kind(ExecutorKind::SingleThreaded);
-        /*
-                let mut fixed_main_schedule = Schedule::new(FixedMain);
-                fixed_main_schedule.set_executor_kind(ExecutorKind::SingleThreaded);
-                let mut fixed_main_loop_schedule = Schedule::new(RunFixedMainLoop);
-                fixed_main_loop_schedule.set_executor_kind(ExecutorKind::SingleThreaded);
-        */
         app.add_schedule(main_schedule)
-            //.add_schedule(fixed_main_schedule)
-            //.add_schedule(fixed_main_loop_schedule)
             .init_resource::<MainScheduleOrder>()
-            //.init_resource::<FixedMainScheduleOrder>()
             .add_systems(Main, Main::run_main);
-        //.add_systems(FixedMain, FixedMain::run_fixed_main);
     }
-}
-
-/// Defines the schedules to be run for the [`FixedMain`] schedule, including
-/// their order.
-#[derive(Resource, Debug)]
-pub struct FixedMainScheduleOrder {
-    /// The labels to run for the [`FixedMain`] schedule (in the order they will be run).
-    pub labels: Vec<InternedScheduleLabel>,
 }

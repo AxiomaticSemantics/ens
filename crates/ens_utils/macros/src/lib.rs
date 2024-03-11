@@ -45,7 +45,7 @@ impl Parse for AllTuples {
 /// A single parameter.
 /// ```
 /// use std::marker::PhantomData;
-/// use bevy_utils_proc_macros::all_tuples;
+/// use ens_utils_proc_macros::all_tuples;
 ///
 /// struct Foo<T> {
 ///     // ..
@@ -73,7 +73,7 @@ impl Parse for AllTuples {
 /// ```
 /// Multiple parameters.
 /// ```
-/// use bevy_utils_proc_macros::all_tuples;
+/// use ens_utils_proc_macros::all_tuples;
 ///
 /// trait Append {
 ///     type Out<Item>;

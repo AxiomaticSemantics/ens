@@ -40,8 +40,8 @@ use std::{cell::UnsafeCell, marker::PhantomData};
 /// This trait can only be derived for structs if each field also implements `QueryFilter`.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
-/// # use bevy_ecs::{query::QueryFilter, component::Component};
+/// # use ens::prelude::*;
+/// # use ens::{query::QueryFilter, component::Component};
 /// #
 /// # #[derive(Component)]
 /// # struct ComponentA;
@@ -65,7 +65,7 @@ use std::{cell::UnsafeCell, marker::PhantomData};
 /// fn my_system(query: Query<Entity, MyFilter<ComponentD, ComponentE>>) {
 ///     // ...
 /// }
-/// # bevy_ecs::system::assert_is_system(my_system);
+/// # ens::system::assert_is_system(my_system);
 /// ```
 ///
 /// [`fetch`]: Self::fetch
@@ -103,10 +103,9 @@ pub trait QueryFilter: WorldQuery {
 /// # Examples
 ///
 /// ```
-/// # use bevy_ecs::component::Component;
-/// # use bevy_ecs::query::With;
-/// # use bevy_ecs::system::IntoSystem;
-/// # use bevy_ecs::system::Query;
+/// # use ens::component::Component;
+/// # use ens::query::With;
+/// # use ens::system::{IntoSystem, Query};
 /// #
 /// # #[derive(Component)]
 /// # struct IsBeautiful;
@@ -118,7 +117,7 @@ pub trait QueryFilter: WorldQuery {
 ///         println!("{} is looking lovely today!", name.name);
 ///     }
 /// }
-/// # bevy_ecs::system::assert_is_system(compliment_entity_system);
+/// # ens::system::assert_is_system(compliment_entity_system);
 /// ```
 pub struct With<T>(PhantomData<T>);
 
@@ -211,10 +210,9 @@ impl<T: Component> QueryFilter for With<T> {
 /// # Examples
 ///
 /// ```
-/// # use bevy_ecs::component::Component;
-/// # use bevy_ecs::query::Without;
-/// # use bevy_ecs::system::IntoSystem;
-/// # use bevy_ecs::system::Query;
+/// # use ens::component::Component;
+/// # use ens::query::Without;
+/// # use ens::system::{IntoSystem, Query};
 /// #
 /// # #[derive(Component)]
 /// # struct Permit;
@@ -226,7 +224,7 @@ impl<T: Component> QueryFilter for With<T> {
 ///         println!("{} has no permit!", name.name);
 ///     }
 /// }
-/// # bevy_ecs::system::assert_is_system(no_permit_system);
+/// # ens::system::assert_is_system(no_permit_system);
 /// ```
 pub struct Without<T>(PhantomData<T>);
 
@@ -323,12 +321,10 @@ impl<T: Component> QueryFilter for Without<T> {
 /// # Examples
 ///
 /// ```
-/// # use bevy_ecs::component::Component;
-/// # use bevy_ecs::entity::Entity;
-/// # use bevy_ecs::query::Changed;
-/// # use bevy_ecs::query::Or;
-/// # use bevy_ecs::system::IntoSystem;
-/// # use bevy_ecs::system::Query;
+/// # use ens::component::Component;
+/// # use ens::entity::Entity;
+/// # use ens::query::{Changed, Or};
+/// # use ens::system::{IntoSystem, Query};
 /// #
 /// # #[derive(Component, Debug)]
 /// # struct Color {};
@@ -340,7 +336,7 @@ impl<T: Component> QueryFilter for Without<T> {
 ///         println!("Entity {:?} got a new style or color", entity);
 ///     }
 /// }
-/// # bevy_ecs::system::assert_is_system(print_cool_entity_system);
+/// # ens::system::assert_is_system(print_cool_entity_system);
 /// ```
 pub struct Or<T>(PhantomData<T>);
 
@@ -532,11 +528,11 @@ all_tuples!(impl_query_filter_tuple, 0, 15, F, S);
 /// For example, these two systems are roughly equivalent in terms of performance:
 ///
 /// ```
-/// # use bevy_ecs::change_detection::{DetectChanges, Ref};
-/// # use bevy_ecs::entity::Entity;
-/// # use bevy_ecs::query::Added;
-/// # use bevy_ecs::system::Query;
-/// # use bevy_ecs_macros::Component;
+/// # use ens::change_detection::{DetectChanges, Ref};
+/// # use ens::entity::Entity;
+/// # use ens::query::Added;
+/// # use ens::system::Query;
+/// # use ens_macros::Component;
 /// # #[derive(Component)]
 /// # struct MyComponent;
 /// # #[derive(Component)]
@@ -556,10 +552,9 @@ all_tuples!(impl_query_filter_tuple, 0, 15, F, S);
 /// # Examples
 ///
 /// ```
-/// # use bevy_ecs::component::Component;
-/// # use bevy_ecs::query::Added;
-/// # use bevy_ecs::system::IntoSystem;
-/// # use bevy_ecs::system::Query;
+/// # use ens::component::Component;
+/// # use ens::query::Added;
+/// # use ens::system::{IntoSystem, Query};
 /// #
 /// # #[derive(Component, Debug)]
 /// # struct Name {};
@@ -570,7 +565,7 @@ all_tuples!(impl_query_filter_tuple, 0, 15, F, S);
 ///     }
 /// }
 ///
-/// # bevy_ecs::system::assert_is_system(print_add_name_component);
+/// # ens::system::assert_is_system(print_add_name_component);
 /// ```
 pub struct Added<T>(PhantomData<T>);
 
@@ -738,12 +733,12 @@ impl<T: Component> QueryFilter for Added<T> {
 /// For example, these two systems are roughly equivalent in terms of performance:
 ///
 /// ```
-/// # use bevy_ecs::change_detection::DetectChanges;
-/// # use bevy_ecs::entity::Entity;
-/// # use bevy_ecs::query::Changed;
-/// # use bevy_ecs::system::Query;
-/// # use bevy_ecs::world::Ref;
-/// # use bevy_ecs_macros::Component;
+/// # use ens::change_detection::DetectChanges;
+/// # use ens::entity::Entity;
+/// # use ens::query::Changed;
+/// # use ens::system::Query;
+/// # use ens::world::Ref;
+/// # use ens_macros::Component;
 /// # #[derive(Component)]
 /// # struct MyComponent;
 /// # #[derive(Component)]
@@ -763,10 +758,10 @@ impl<T: Component> QueryFilter for Added<T> {
 /// # Examples
 ///
 /// ```
-/// # use bevy_ecs::component::Component;
-/// # use bevy_ecs::query::Changed;
-/// # use bevy_ecs::system::IntoSystem;
-/// # use bevy_ecs::system::Query;
+/// # use ens::component::Component;
+/// # use ens::query::Changed;
+/// # use ens::system::IntoSystem;
+/// # use ens::system::Query;
 /// #
 /// # #[derive(Component, Debug)]
 /// # struct Name {};
@@ -779,7 +774,7 @@ impl<T: Component> QueryFilter for Added<T> {
 ///     }
 /// }
 ///
-/// # bevy_ecs::system::assert_is_system(print_moving_objects_system);
+/// # ens::system::assert_is_system(print_moving_objects_system);
 /// ```
 pub struct Changed<T>(PhantomData<T>);
 

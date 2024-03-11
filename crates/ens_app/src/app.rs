@@ -1,4 +1,4 @@
-use crate::{First, Main, MainSchedulePlugin, Plugin, Plugins, StateTransition};
+use crate::{Main, MainSchedulePlugin, Plugin, Plugins, PreUpdate, StateTransition};
 
 use ens::{
     prelude::*,
@@ -9,8 +9,6 @@ use ens::{
 };
 pub use ens_derive::AppLabel;
 pub use ens_utils::label::DynEq;
-#[cfg(feature = "trace")]
-use ens_utils::tracing::info_span;
 use ens_utils::{intern::Interned, HashMap, HashSet};
 
 use std::{
@@ -30,7 +28,7 @@ pub type InternedAppLabel = Interned<dyn AppLabel>;
 
 #[derive(Debug, Error)]
 pub(crate) enum AppError {
-    #[error("duplicate plugin {plugin_name:?}")]
+    #[error("duplicate plugin: `{plugin_name:?}`")]
     DuplicatePlugin { plugin_name: String },
 }
 
@@ -192,7 +190,10 @@ impl Debug for SubApp {
 impl Default for App {
     fn default() -> Self {
         let mut app = App::empty();
-        app.add_plugins(MainSchedulePlugin).add_event::<AppExit>();
+        app.add_plugins(MainSchedulePlugin);
+
+        #[cfg(feature = "events")]
+        app.add_event::<AppExit>();
 
         app
     }
@@ -256,13 +257,7 @@ impl App {
     ///
     /// The active schedule of the app must be set before this method is called.
     pub fn update(&mut self) {
-        #[cfg(feature = "trace")]
-        let _ens_update_span = info_span!("update").entered();
-        {
-            #[cfg(feature = "trace")]
-            let _ens_main_update_span = info_span!("main app").entered();
-            self.world.run_schedule(self.main_schedule_label);
-        }
+        self.world.run_schedule(self.main_schedule_label);
 
         #[cfg(feature = "sub_app")]
         for (_label, sub_app) in &mut self.sub_apps {
@@ -272,7 +267,6 @@ impl App {
             sub_app.run();
         }
 
-        #[cfg(feature = "sub_app")]
         self.world.clear_trackers();
     }
 
@@ -300,9 +294,6 @@ impl App {
     ///
     /// Panics if called from `Plugin::build()`, because it would prevent other plugins to properly build.
     pub fn run(&mut self) {
-        #[cfg(feature = "trace")]
-        let _ens_app_run_span = info_span!("ens_app").entered();
-
         let mut app = std::mem::replace(self, App::empty());
         if app.building_plugin_depth > 0 {
             panic!("App::run() was called from within Plugin::build(), which is not allowed.");
@@ -369,6 +360,7 @@ impl App {
     ///
     /// Note that you can also apply state transitions at other points in the schedule
     /// by adding the [`apply_state_transition`] system manually.
+    #[cfg(feature = "states")]
     pub fn init_state<S: States + FromWorld>(&mut self) -> &mut Self {
         if !self.world.contains_resource::<State<S>>() {
             self.init_resource::<State<S>>()
@@ -406,6 +398,7 @@ impl App {
     ///
     /// Note that you can also apply state transitions at other points in the schedule
     /// by adding the [`apply_state_transition`] system manually.
+    #[cfg(feature = "states")]
     pub fn insert_state<S: States>(&mut self, state: S) -> &mut Self {
         self.insert_resource(State::new(state))
             .init_resource::<NextState<S>>()
@@ -502,13 +495,14 @@ impl App {
     /// ```
     ///
     /// [`event_update_system`]: ens::event::event_update_system
+    #[cfg(feature = "events")]
     pub fn add_event<T>(&mut self) -> &mut Self
     where
         T: Event,
     {
         if !self.world.contains_resource::<Events<T>>() {
             self.init_resource::<Events<T>>().add_systems(
-                First,
+                PreUpdate,
                 ens::event::event_update_system::<T>
                     .in_set(ens::event::EventUpdates)
                     .run_if(ens::event::event_update_condition::<T>),
@@ -1016,11 +1010,14 @@ fn run_once(mut app: App) {
 /// If you don't require access to other components or resources, consider implementing the [`Drop`]
 /// trait on components/resources for code that runs on exit. That saves you from worrying about
 /// system schedule ordering, and is idiomatic Rust.
+#[cfg(feature = "events")]
 #[derive(Event, Debug, Clone, Default)]
 pub struct AppExit;
 
 #[cfg(test)]
 mod tests {
+    use crate as ens_app;
+
     use std::marker::PhantomData;
 
     use ens::{
@@ -1123,7 +1120,7 @@ mod tests {
     #[test]
     fn test_derive_app_label() {
         use super::AppLabel;
-        use crate::{self as app};
+        use crate::app;
 
         #[derive(AppLabel, Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
         struct UnitLabel;

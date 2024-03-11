@@ -257,7 +257,7 @@ impl<T> NodeConfigs<T> {
 /// # Examples
 ///
 /// ```
-/// # use bevy_ecs::schedule::IntoSystemConfigs;
+/// # use ens::schedule::IntoSystemConfigs;
 /// # struct AppMock;
 /// # struct Update;
 /// # impl AppMock {
@@ -347,7 +347,7 @@ where
     /// system, as shown below:
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # let mut schedule = Schedule::default();
     /// # fn a() {}
     /// # fn b() {}
@@ -380,7 +380,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # let mut schedule = Schedule::default();
     /// # fn a() {}
     /// # fn b() {}

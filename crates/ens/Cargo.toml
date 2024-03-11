@@ -13,6 +13,7 @@ categories = ["game-engines", "data-structures"]
 entity_mapper = []
 serialize = ["dep:serde"]
 trace = []
+events = []
 multi-threaded = ["ens_tasks/multi-threaded"]
 default = []
 
@@ -30,11 +31,9 @@ rustc-hash = "1.1"
 serde = { version = "1", optional = true }
 thiserror = "1.0"
 nonmax = "0.5"
-env_logger = "0.11.3"
 log = "0.4.21"
 
 [dev-dependencies]
-#rand = "0.8"
 static_assertions = "1.1.0"
 
 [[example]]

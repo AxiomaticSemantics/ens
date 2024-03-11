@@ -34,7 +34,7 @@ pub struct BatchingStrategy {
     ///
     /// Defaults to 1.
     ///
-    /// [`ComputeTaskPool`]: bevy_tasks::ComputeTaskPool
+    /// [`ComputeTaskPool`]: ens_tasks::ComputeTaskPool
     pub batches_per_thread: usize,
 }
 
@@ -106,7 +106,7 @@ impl<'w, 's, D: QueryData, F: QueryFilter> QueryParIter<'w, 's, D, F> {
     /// If the [`ComputeTaskPool`] is not initialized. If using this from a query that is being
     /// initialized and run from the ECS scheduler, this should never panic.
     ///
-    /// [`ComputeTaskPool`]: bevy_tasks::ComputeTaskPool
+    /// [`ComputeTaskPool`]: ens_tasks::ComputeTaskPool
     #[inline]
     pub fn for_each<FN: Fn(QueryItem<'w, D>) + Send + Sync + Clone>(self, func: FN) {
         #[cfg(not(feature = "multi-threaded"))]

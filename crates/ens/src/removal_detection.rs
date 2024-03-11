@@ -109,11 +109,11 @@ impl RemovedComponentEvents {
 /// using a regularly scheduled system that requests `Query<(Entity, &T), Changed<T>>`
 /// and stores the data somewhere safe to later cross-reference.
 ///
-/// If you are using `bevy_ecs` as a standalone crate,
+/// If you are using `ens` as a standalone crate,
 /// note that the `RemovedComponents` list will not be automatically cleared for you,
 /// and will need to be manually flushed using [`World::clear_trackers`](World::clear_trackers)
 ///
-/// For users of `bevy` and `bevy_app`, this is automatically done in `bevy_app::App::update`.
+/// For users of `ens_app`, this is automatically done in `ens_app::App::update`.
 /// For the main world, [`World::clear_trackers`](World::clear_trackers) is run after the main schedule is run and after
 /// `SubApp`'s have run.
 ///
@@ -122,16 +122,16 @@ impl RemovedComponentEvents {
 /// Basic usage:
 ///
 /// ```
-/// # use bevy_ecs::component::Component;
-/// # use bevy_ecs::system::IntoSystem;
-/// # use bevy_ecs::removal_detection::RemovedComponents;
+/// # use ens::component::Component;
+/// # use ens::system::IntoSystem;
+/// # use ens::removal_detection::RemovedComponents;
 /// #
 /// # #[derive(Component)]
 /// # struct MyComponent;
 /// fn react_on_removal(mut removed: RemovedComponents<MyComponent>) {
 ///     removed.read().for_each(|removed_entity| println!("{:?}", removed_entity));
 /// }
-/// # bevy_ecs::system::assert_is_system(react_on_removal);
+/// # ens::system::assert_is_system(react_on_removal);
 /// ```
 #[derive(SystemParam)]
 pub struct RemovedComponents<'w, 's, T: Component> {

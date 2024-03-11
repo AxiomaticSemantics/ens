@@ -32,7 +32,7 @@ use std::{any::TypeId, cell::UnsafeCell, fmt::Debug, marker::PhantomData, ptr, p
 /// Access to resources and components can be done uniquely using [`World::resource_mut`] and [`World::entity_mut`], and shared using [`World::resource`] and [`World::entity`].
 /// These methods use lifetimes to check at compile time that no aliasing rules are being broken.
 ///
-/// This alone is not enough to implement bevy systems where multiple systems can access *disjoint* parts of the world concurrently. For this, bevy stores all values of
+/// This alone is not enough to implement ens systems where multiple systems can access *disjoint* parts of the world concurrently. For this, ens stores all values of
 /// resources and components (and [`ComponentTicks`]) in [`UnsafeCell`]s, and carefully validates disjoint access patterns using
 /// APIs like [`System::component_access`](crate::system::System::component_access).
 ///
@@ -45,10 +45,10 @@ use std::{any::TypeId, cell::UnsafeCell, fmt::Debug, marker::PhantomData, ptr, p
 /// safely hand out mutable references.
 ///
 /// ```
-/// use bevy_ecs::world::World;
-/// use bevy_ecs::change_detection::Mut;
-/// use bevy_ecs::system::Resource;
-/// use bevy_ecs::world::unsafe_world_cell::UnsafeWorldCell;
+/// use ens::world::World;
+/// use ens::change_detection::Mut;
+/// use ens::system::Resource;
+/// use ens::world::unsafe_world_cell::UnsafeWorldCell;
 ///
 /// // INVARIANT: existence of this struct means that users of it are the only ones being able to access resources in the world
 /// struct OnlyResourceAccessWorld<'w>(UnsafeWorldCell<'w>);
@@ -112,7 +112,7 @@ impl<'w> UnsafeWorldCell<'w> {
     ///
     /// [//]: # (This test fails miri.)
     /// ```no_run
-    /// # use bevy_ecs::prelude::*;
+    /// # use ens::prelude::*;
     /// # #[derive(Component)] struct Player;
     /// # fn store_but_dont_use<T>(_: T) {}
     /// # let mut world = World::new();

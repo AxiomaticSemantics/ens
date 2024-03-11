@@ -101,7 +101,7 @@ pub trait System: Send + Sync + 'static {
     /// Checks any [`Tick`]s stored on this system and wraps their value if they get too old.
     ///
     /// This method must be called periodically to ensure that change detection behaves correctly.
-    /// When using bevy's default configuration, this will be called for you as needed.
+    /// When using Ens's default configuration, this will be called for you as needed.
     fn check_change_tick(&mut self, change_tick: Tick);
 
     /// Returns the system's default [system sets](crate::schedule::SystemSet).
@@ -185,8 +185,8 @@ impl<In: 'static, Out: 'static> Debug for dyn System<In = In, Out = Out> {
 /// reset on every run and change detection does not work.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
-/// # use bevy_ecs::system::RunSystemOnce;
+/// # use ens::prelude::*;
+/// # use ens::system::RunSystemOnce;
 /// #[derive(Resource, Default)]
 /// struct Counter(u8);
 ///
@@ -217,8 +217,8 @@ impl<In: 'static, Out: 'static> Debug for dyn System<In = In, Out = Out> {
 ///
 /// This usage is helpful when trying to test systems or functions that operate on [`Commands`](crate::system::Commands):
 /// ```
-/// # use bevy_ecs::prelude::*;
-/// # use bevy_ecs::system::RunSystemOnce;
+/// # use ens::prelude::*;
+/// # use ens::system::RunSystemOnce;
 /// let mut world = World::default();
 /// let entity = world.run_system_once(|mut commands: Commands| {
 ///     commands.spawn_empty().id()
@@ -230,8 +230,8 @@ impl<In: 'static, Out: 'static> Debug for dyn System<In = In, Out = Out> {
 ///
 /// This usage is helpful when trying to run an arbitrary query on a world for testing or debugging purposes:
 /// ```
-/// # use bevy_ecs::prelude::*;
-/// # use bevy_ecs::system::RunSystemOnce;
+/// # use ens::prelude::*;
+/// # use ens::system::RunSystemOnce;
 ///
 /// #[derive(Component)]
 /// struct T(usize);
@@ -250,8 +250,8 @@ impl<In: 'static, Out: 'static> Debug for dyn System<In = In, Out = Out> {
 /// Note that instead of closures you can also pass in regular functions as systems:
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
-/// # use bevy_ecs::system::RunSystemOnce;
+/// # use ens::prelude::*;
+/// # use ens::system::RunSystemOnce;
 ///
 /// #[derive(Component)]
 /// struct T(usize);

@@ -16,15 +16,14 @@ entity_name = []
 # ens
 ens = { path = "../ens", version = "0.14.0-dev", features = [] }
 ens_app = { path = "../ens_app", version = "0.14.0-dev", features = [] }
-ens_tasks = { path = "../ens_tasks", version = "0.14.0-dev" }
 ens_utils = { path = "../ens_utils", version = "0.14.0-dev" }
 
 # other
-env_logger = "0.11.3"
 log = "0.4.21"
 serde = { version = "1.0", feature = ["derive"], optional = true }
 
 [dev-dependencies]
+ens_tasks = { path = "../ens_tasks", version = "0.14.0-dev" }
 crossbeam-channel = "0.5.0"
 
 [lints]

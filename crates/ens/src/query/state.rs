@@ -405,8 +405,8 @@ impl<D: QueryData, F: QueryFilter> QueryState<D, F> {
     /// # Examples
     ///
     /// ```
-    /// use bevy_ecs::prelude::*;
-    /// use bevy_ecs::query::QueryEntityError;
+    /// use ens::prelude::*;
+    /// use ens::query::QueryEntityError;
     ///
     /// #[derive(Component, PartialEq, Debug)]
     /// struct A(usize);
@@ -475,8 +475,8 @@ impl<D: QueryData, F: QueryFilter> QueryState<D, F> {
     /// returned instead.
     ///
     /// ```
-    /// use bevy_ecs::prelude::*;
-    /// use bevy_ecs::query::QueryEntityError;
+    /// use ens::prelude::*;
+    /// use ens::query::QueryEntityError;
     ///
     /// #[derive(Component, PartialEq, Debug)]
     /// struct A(usize);
@@ -1028,13 +1028,13 @@ impl<D: QueryData, F: QueryFilter> QueryState<D, F> {
     /// # Examples
     ///
     /// ```
-    /// use bevy_ecs::prelude::*;
-    /// use bevy_ecs::query::QueryEntityError;
+    /// use ens::prelude::*;
+    /// use ens::query::QueryEntityError;
     ///
     /// #[derive(Component, PartialEq, Debug)]
     /// struct A(usize);
     ///
-    /// # bevy_tasks::ComputeTaskPool::get_or_init(|| bevy_tasks::TaskPool::new());
+    /// # ens_tasks::ComputeTaskPool::get_or_init(|| ens_tasks::TaskPool::new());
     ///
     /// let mut world = World::new();
     ///
@@ -1064,7 +1064,7 @@ impl<D: QueryData, F: QueryFilter> QueryState<D, F> {
     /// initialized and run from the ECS scheduler, this should never panic.
     ///
     /// [`par_iter`]: Self::par_iter
-    /// [`ComputeTaskPool`]: bevy_tasks::ComputeTaskPool
+    /// [`ComputeTaskPool`]: ens_tasks::ComputeTaskPool
     #[inline]
     pub fn par_iter_mut<'w, 's>(&'s mut self, world: &'w mut World) -> QueryParIter<'w, 's, D, F> {
         self.update_archetypes(world);
@@ -1094,7 +1094,7 @@ impl<D: QueryData, F: QueryFilter> QueryState<D, F> {
     /// This does not validate that `world.id()` matches `self.world_id`. Calling this on a `world`
     /// with a mismatched [`WorldId`] is unsound.
     ///
-    /// [`ComputeTaskPool`]: bevy_tasks::ComputeTaskPool
+    /// [`ComputeTaskPool`]: ens_tasks::ComputeTaskPool
     #[cfg(feature = "multi-threaded")]
     pub(crate) unsafe fn par_for_each_unchecked_manual<
         'w,
@@ -1503,7 +1503,7 @@ mod tests {
 
     #[test]
     #[should_panic(
-        expected = "Transmuted state for ((&bevy_ecs::query::state::tests::A, &bevy_ecs::query::state::tests::B), ()) attempts to access terms that are not allowed by original state (&bevy_ecs::query::state::tests::A, ())."
+        expected = "Transmuted state for ((&ens::query::state::tests::A, &ens::query::state::tests::B), ()) attempts to access terms that are not allowed by original state (&ens::query::state::tests::A, ())."
     )]
     fn cannot_transmute_to_include_data_not_in_original_query() {
         let mut world = World::new();
@@ -1517,7 +1517,7 @@ mod tests {
 
     #[test]
     #[should_panic(
-        expected = "Transmuted state for (&mut bevy_ecs::query::state::tests::A, ()) attempts to access terms that are not allowed by original state (&bevy_ecs::query::state::tests::A, ())."
+        expected = "Transmuted state for (&mut ens::query::state::tests::A, ()) attempts to access terms that are not allowed by original state (&ens::query::state::tests::A, ())."
     )]
     fn cannot_transmute_immut_to_mut() {
         let mut world = World::new();
@@ -1529,7 +1529,7 @@ mod tests {
 
     #[test]
     #[should_panic(
-        expected = "Transmuted state for (&bevy_ecs::query::state::tests::A, ()) attempts to access terms that are not allowed by original state (core::option::Option<&bevy_ecs::query::state::tests::A>, ())."
+        expected = "Transmuted state for (&ens::query::state::tests::A, ()) attempts to access terms that are not allowed by original state (core::option::Option<&ens::query::state::tests::A>, ())."
     )]
     fn cannot_transmute_option_to_immut() {
         let mut world = World::new();
@@ -1543,7 +1543,7 @@ mod tests {
 
     #[test]
     #[should_panic(
-        expected = "Transmuted state for (&bevy_ecs::query::state::tests::A, ()) attempts to access terms that are not allowed by original state (bevy_ecs::world::entity_ref::EntityRef, ())."
+        expected = "Transmuted state for (&ens::query::state::tests::A, ()) attempts to access terms that are not allowed by original state (ens::world::entity_ref::EntityRef, ())."
     )]
     fn cannot_transmute_entity_ref() {
         let mut world = World::new();

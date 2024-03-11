@@ -38,7 +38,7 @@ impl<T: ?Sized> ConstNonNull<T> {
     /// # Examples
     ///
     /// ```
-    /// use bevy_ptr::ConstNonNull;
+    /// use ens_ptr::ConstNonNull;
     ///
     /// let x = 0u32;
     /// let ptr = ConstNonNull::<u32>::new(&x as *const _).expect("ptr is null!");
@@ -60,7 +60,7 @@ impl<T: ?Sized> ConstNonNull<T> {
     /// # Examples
     ///
     /// ```
-    /// use bevy_ptr::ConstNonNull;
+    /// use ens_ptr::ConstNonNull;
     ///
     /// let x = 0u32;
     /// let ptr = unsafe { ConstNonNull::new_unchecked(&x as *const _) };
@@ -69,7 +69,7 @@ impl<T: ?Sized> ConstNonNull<T> {
     /// *Incorrect* usage of this function:
     ///
     /// ```rust,no_run
-    /// use bevy_ptr::ConstNonNull;
+    /// use ens_ptr::ConstNonNull;
     ///
     /// // NEVER DO THAT!!! This is undefined behavior. ⚠️
     /// let ptr = unsafe { ConstNonNull::<u32>::new_unchecked(std::ptr::null()) };
@@ -104,7 +104,7 @@ impl<T: ?Sized> ConstNonNull<T> {
     /// # Examples
     ///
     /// ```
-    /// use bevy_ptr::ConstNonNull;
+    /// use ens_ptr::ConstNonNull;
     ///
     /// let mut x = 0u32;
     /// let ptr = ConstNonNull::new(&mut x as *mut _).expect("ptr is null!");

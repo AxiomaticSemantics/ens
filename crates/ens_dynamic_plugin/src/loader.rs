@@ -2,7 +2,7 @@ use libloading::{Library, Symbol};
 use std::ffi::OsStr;
 use thiserror::Error;
 
-use bevy_app::{App, CreatePlugin, Plugin};
+use ens_app::{App, CreatePlugin, Plugin};
 
 /// Errors that can occur when loading a dynamic plugin
 #[derive(Debug, Error)]
@@ -16,12 +16,12 @@ pub enum DynamicPluginLoadError {
 }
 
 /// Dynamically links a plugin at the given path. The plugin must export a function with the
-/// [`CreatePlugin`] signature named `_bevy_create_plugin`.
+/// [`CreatePlugin`] signature named `_ens_create_plugin`.
 ///
 /// # Safety
 ///
-/// The specified plugin must be linked against the exact same `libbevy.so` as this program.
-/// In addition the `_bevy_create_plugin` symbol must not be manually created, but instead created
+/// The specified plugin must be linked against the exact same `libens.so` as this program.
+/// In addition the `_ens_create_plugin` symbol must not be manually created, but instead created
 /// by deriving `DynamicPlugin` on a unit struct implementing [`Plugin`].
 ///
 /// Dynamically loading plugins is orchestrated through dynamic linking. When linking against
@@ -34,10 +34,10 @@ pub unsafe fn dynamically_load_plugin<P: AsRef<OsStr>>(
     // SAFETY: Caller must follow the safety requirements of Library::new.
     let lib = unsafe { Library::new(path).map_err(DynamicPluginLoadError::Library)? };
 
-    // SAFETY: Loaded plugins are not allowed to specify `_bevy_create_plugin` symbol manually, but
-    // must instead automatically generate it through `DynamicPlugin`.
+    // SAFETY: Loaded plugins must not specify `_ens_create_plugin` symbol manually, it is
+    // instead automatically generated through `DynamicPlugin`.
     let func: Symbol<CreatePlugin> = unsafe {
-        lib.get(b"_bevy_create_plugin")
+        lib.get(b"_ens_create_plugin")
             .map_err(DynamicPluginLoadError::Plugin)?
     };
 
@@ -62,8 +62,8 @@ pub trait DynamicPluginExt {
 
 impl DynamicPluginExt for App {
     unsafe fn load_plugin<P: AsRef<OsStr>>(&mut self, path: P) -> &mut Self {
-        // SAFETY: Follows the same safety requirements as `dynamically_load_plugin`.
-        let (lib, plugin) = unsafe { dynamically_load_plugin(path).unwrap() };
+        // SAFETY: Follows the same safety requirements as `load_plugin`.
+        let (lib, plugin) = unsafe { load_plugin(path).unwrap() };
         std::mem::forget(lib); // Ensure that the library is not automatically unloaded
         plugin.build(self);
         self

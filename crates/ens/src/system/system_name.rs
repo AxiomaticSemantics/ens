@@ -12,8 +12,7 @@ use std::ops::Deref;
 /// # Examples
 ///
 /// ```
-/// # use bevy_ecs::system::SystemName;
-/// # use bevy_ecs::system::SystemParam;
+/// # use ens::system::{SystemName, SystemParam};
 ///
 /// #[derive(SystemParam)]
 /// struct Logger<'s> {

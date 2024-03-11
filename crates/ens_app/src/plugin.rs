@@ -3,7 +3,7 @@ use downcast_rs::{impl_downcast, Downcast};
 use crate::App;
 use std::any::Any;
 
-/// A collection of Bevy app logic and configuration.
+/// A collection of app logic and configuration.
 ///
 /// Plugins configure an [`App`]. When an [`App`] registers a plugin,
 /// the plugin's [`Plugin::build`] function is run. By default, a plugin

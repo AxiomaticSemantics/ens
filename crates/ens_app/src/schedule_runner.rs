@@ -1,9 +1,11 @@
-use crate::{
-    app::{App, AppExit},
-    plugin::Plugin,
-    PluginsState,
-};
+use crate::{app::App, plugin::Plugin, PluginsState};
+
+#[cfg(feature = "events")]
+use crate::app::AppExit;
+
+#[cfg(feature = "events")]
 use ens::event::{Events, ManualEventReader};
+
 #[cfg(feature = "loop_wait")]
 use std::time::{Duration, Instant};
 
@@ -86,11 +88,14 @@ impl Plugin for ScheduleRunnerPlugin {
                 app.cleanup();
             }
 
+            #[cfg(feature = "events")]
             let mut app_exit_event_reader = ManualEventReader::<AppExit>::default();
+
             match run_mode {
                 RunMode::Once => app.update(),
                 RunMode::Loop => loop {
                     app.update();
+                    #[cfg(feature = "events")]
                     if let Some(app_exit_events) = app.world.get_resource_mut::<Events<AppExit>>() {
                         if let Some(exit) = app_exit_event_reader.read(&app_exit_events).last() {
                             break;
@@ -106,6 +111,7 @@ impl Plugin for ScheduleRunnerPlugin {
 
                         app.update();
 
+                        #[cfg(feature = "events")]
                         if let Some(app_exit_events) =
                             app.world.get_resource_mut::<Events<AppExit>>()
                         {
