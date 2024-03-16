@@ -1,8 +1,9 @@
 use crate::{App, Plugin};
 use ens::{
+    access::Mut,
     schedule::{ExecutorKind, InternedScheduleLabel, Schedule, ScheduleLabel},
     system::{Local, Resource},
-    world::{Mut, World},
+    world::World,
 };
 
 /// The schedule that contains the app logic that is evaluated each tick of [`App::update()`].
@@ -26,18 +27,21 @@ pub struct Main;
 /// The schedule that runs before [`Startup`].
 ///
 /// See the [`Main`] schedule for some details about how schedules are run.
+#[cfg(feature = "startup")]
 #[derive(ScheduleLabel, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PreStartup;
 
 /// The schedule that runs once when the app starts.
 ///
 /// See the [`Main`] schedule for some details about how schedules are run.
+#[cfg(feature = "startup")]
 #[derive(ScheduleLabel, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Startup;
 
 /// The schedule that runs once after [`Startup`].
 ///
 /// See the [`Main`] schedule for some details about how schedules are run.
+#[cfg(feature = "startup")]
 #[derive(ScheduleLabel, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PostStartup;
 
@@ -54,7 +58,7 @@ pub struct PreUpdate;
 
 /// Runs [state transitions](ens::schedule::States).
 ///
-/// See the [`Main`] schedule for some details about how schedules are run.
+#[cfg(feature = "states")]
 #[derive(ScheduleLabel, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StateTransition;
 
@@ -82,6 +86,7 @@ pub struct MainScheduleOrder {
     /// The labels to run for the main phase of the [`Main`] schedule (in the order they will be run).
     pub labels: Vec<InternedScheduleLabel>,
     /// The labels to run for the startup phase of the [`Main`] schedule (in the order they will be run).
+    #[cfg(feature = "startup")]
     pub startup_labels: Vec<InternedScheduleLabel>,
 }
 
@@ -89,13 +94,13 @@ impl Default for MainScheduleOrder {
     fn default() -> Self {
         Self {
             labels: vec![
-                //First.intern(),
                 PreUpdate.intern(),
-                //StateTransition.intern(),
+                #[cfg(feature = "states")]
+                StateTransition.intern(),
                 Update.intern(),
                 PostUpdate.intern(),
-                //Last.intern(),
             ],
+            #[cfg(feature = "startup")]
             startup_labels: vec![PreStartup.intern(), Startup.intern(), PostStartup.intern()],
         }
     }
@@ -113,6 +118,7 @@ impl MainScheduleOrder {
     }
 
     /// Adds the given `schedule` after the `after` schedule in the list of startup schedules.
+    #[cfg(feature = "startup")]
     pub fn insert_startup_after(
         &mut self,
         after: impl ScheduleLabel,

@@ -1,14 +1,19 @@
 use crate::{
+    access::{Mut, MutUntyped},
     archetype::{Archetype, ArchetypeId, Archetypes},
     bundle::{Bundle, BundleId, BundleInfo, BundleInserter, DynamicBundle},
-    change_detection::MutUntyped,
-    component::{Component, ComponentId, ComponentTicks, Components, StorageType},
+    component::{Component, ComponentId, Components, StorageType},
     entity::{Entities, Entity, EntityLocation},
     query::{Access, DebugCheckedUnwrap},
-    removal_detection::RemovedComponentEvents,
     storage::Storages,
-    world::{Mut, World},
+    world::World,
 };
+
+#[cfg(feature = "change_detection")]
+use crate::component::ComponentTicks;
+
+#[cfg(feature = "events")]
+use crate::removal_detection::RemovedComponentEvents;
 
 use ens_ptr::{OwningPtr, Ptr};
 
@@ -124,6 +129,7 @@ impl<'w> EntityRef<'w> {
 
     /// Retrieves the change ticks for the given component. This can be useful for implementing change
     /// detection in custom runtimes.
+    #[cfg(feature = "change_detection")]
     #[inline]
     pub fn get_change_ticks<T: Component>(&self) -> Option<ComponentTicks> {
         // SAFETY: We have read-only access to all components of this entity.
@@ -136,6 +142,7 @@ impl<'w> EntityRef<'w> {
     /// **You should prefer to use the typed API [`EntityRef::get_change_ticks`] where possible and only
     /// use this in cases where the actual component types are not known at
     /// compile time.**
+    #[cfg(feature = "change_detection")]
     #[inline]
     pub fn get_change_ticks_by_id(&self, component_id: ComponentId) -> Option<ComponentTicks> {
         // SAFETY: We have read-only access to all components of this entity.
@@ -369,6 +376,7 @@ impl<'w> EntityMut<'w> {
 
     /// Retrieves the change ticks for the given component. This can be useful for implementing change
     /// detection in custom runtimes.
+    #[cfg(feature = "change_detection")]
     #[inline]
     pub fn get_change_ticks<T: Component>(&self) -> Option<ComponentTicks> {
         self.as_readonly().get_change_ticks::<T>()
@@ -380,6 +388,7 @@ impl<'w> EntityMut<'w> {
     /// **You should prefer to use the typed API [`EntityWorldMut::get_change_ticks`] where possible and only
     /// use this in cases where the actual component types are not known at
     /// compile time.**
+    #[cfg(feature = "change_detection")]
     #[inline]
     pub fn get_change_ticks_by_id(&self, component_id: ComponentId) -> Option<ComponentTicks> {
         self.as_readonly().get_change_ticks_by_id(component_id)
@@ -604,6 +613,7 @@ impl<'w> EntityWorldMut<'w> {
 
     /// Retrieves the change ticks for the given component. This can be useful for implementing change
     /// detection in custom runtimes.
+    #[cfg(feature = "change_detection")]
     #[inline]
     pub fn get_change_ticks<T: Component>(&self) -> Option<ComponentTicks> {
         EntityRef::from(self).get_change_ticks::<T>()
@@ -615,6 +625,7 @@ impl<'w> EntityWorldMut<'w> {
     /// **You should prefer to use the typed API [`EntityWorldMut::get_change_ticks`] where possible and only
     /// use this in cases where the actual component types are not known at
     /// compile time.**
+    #[cfg(feature = "change_detection")]
     #[inline]
     pub fn get_change_ticks_by_id(&self, component_id: ComponentId) -> Option<ComponentTicks> {
         EntityRef::from(self).get_change_ticks_by_id(component_id)
@@ -653,12 +664,26 @@ impl<'w> EntityWorldMut<'w> {
     ///
     /// This will overwrite any previous value(s) of the same component type.
     pub fn insert<T: Bundle>(&mut self, bundle: T) -> &mut Self {
-        let change_tick = self.world.change_tick();
-        let mut bundle_inserter =
-            BundleInserter::new::<T>(self.world, self.location.archetype_id, change_tick);
-        // SAFETY: location matches current entity. `T` matches `bundle_info`
-        self.location = unsafe { bundle_inserter.insert(self.entity, self.location, bundle) };
-        self
+        #[cfg(feature = "change_detection")]
+        {
+            let change_tick = self.world.change_tick();
+            let mut bundle_inserter =
+                BundleInserter::new::<T>(self.world, self.location.archetype_id, change_tick);
+            // SAFETY: location matches current entity. `T` matches `bundle_info`
+            self.location = unsafe { bundle_inserter.insert(self.entity, self.location, bundle) };
+
+            self
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
+            let mut bundle_inserter =
+                BundleInserter::new::<T>(self.world, self.location.archetype_id);
+            // SAFETY: location matches current entity. `T` matches `bundle_info`
+            self.location = unsafe { bundle_inserter.insert(self.entity, self.location, bundle) };
+
+            self
+        }
     }
 
     /// Inserts a dynamic [`Component`] into the entity.
@@ -676,28 +701,46 @@ impl<'w> EntityWorldMut<'w> {
         component_id: ComponentId,
         component: OwningPtr<'_>,
     ) -> &mut Self {
-        let change_tick = self.world.change_tick();
         let bundle_id = self
             .world
             .bundles
             .init_component_info(&self.world.components, component_id);
         let storage_type = self.world.bundles.get_storage_unchecked(bundle_id);
 
-        let bundle_inserter = BundleInserter::new_with_id(
-            self.world,
-            self.location.archetype_id,
-            bundle_id,
-            change_tick,
-        );
+        #[cfg(feature = "change_detection")]
+        {
+            let change_tick = self.world.change_tick();
+            let bundle_inserter = BundleInserter::new_with_id(
+                self.world,
+                self.location.archetype_id,
+                bundle_id,
+                change_tick,
+            );
 
-        self.location = insert_dynamic_bundle(
-            bundle_inserter,
-            self.entity,
-            self.location,
-            Some(component).into_iter(),
-            Some(storage_type).iter().cloned(),
-        );
-        self
+            self.location = insert_dynamic_bundle(
+                bundle_inserter,
+                self.entity,
+                self.location,
+                Some(component).into_iter(),
+                Some(storage_type).iter().cloned(),
+            );
+            self
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
+            let bundle_inserter =
+                BundleInserter::new_with_id(self.world, self.location.archetype_id, bundle_id);
+
+            self.location = insert_dynamic_bundle(
+                bundle_inserter,
+                self.entity,
+                self.location,
+                Some(component).into_iter(),
+                Some(storage_type).iter().cloned(),
+            );
+            self
+        }
     }
 
     /// Inserts a dynamic [`Bundle`] into the entity.
@@ -717,27 +760,46 @@ impl<'w> EntityWorldMut<'w> {
         component_ids: &[ComponentId],
         iter_components: I,
     ) -> &mut Self {
-        let change_tick = self.world.change_tick();
         let bundle_id = self
             .world
             .bundles
             .init_dynamic_info(&self.world.components, component_ids);
         let mut storage_types =
             std::mem::take(self.world.bundles.get_storages_unchecked(bundle_id));
-        let bundle_inserter = BundleInserter::new_with_id(
-            self.world,
-            self.location.archetype_id,
-            bundle_id,
-            change_tick,
-        );
 
-        self.location = insert_dynamic_bundle(
-            bundle_inserter,
-            self.entity,
-            self.location,
-            iter_components,
-            (*storage_types).iter().cloned(),
-        );
+        #[cfg(feature = "change_detection")]
+        {
+            let change_tick = self.world.change_tick();
+            let bundle_inserter = BundleInserter::new_with_id(
+                self.world,
+                self.location.archetype_id,
+                bundle_id,
+                change_tick,
+            );
+
+            self.location = insert_dynamic_bundle(
+                bundle_inserter,
+                self.entity,
+                self.location,
+                iter_components,
+                (*storage_types).iter().cloned(),
+            );
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
+            let bundle_inserter =
+                BundleInserter::new_with_id(self.world, self.location.archetype_id, bundle_id);
+
+            self.location = insert_dynamic_bundle(
+                bundle_inserter,
+                self.entity,
+                self.location,
+                iter_components,
+                (*storage_types).iter().cloned(),
+            );
+        }
+
         *self.world.bundles.get_storages_unchecked(bundle_id) = std::mem::take(&mut storage_types);
         self
     }
@@ -785,10 +847,13 @@ impl<'w> EntityWorldMut<'w> {
             )
         };
 
-        if old_archetype.has_on_remove() {
-            // SAFETY: All components in the archetype exist in world
-            unsafe {
-                deferred_world.trigger_on_remove(entity, bundle_info.iter_components());
+        #[cfg(feature = "component_hooks")]
+        {
+            if old_archetype.has_on_remove() {
+                // SAFETY: All components in the archetype exist in world
+                unsafe {
+                    deferred_world.trigger_on_remove(entity, bundle_info.iter_components());
+                }
             }
         }
 
@@ -796,6 +861,7 @@ impl<'w> EntityWorldMut<'w> {
         let storages = &mut world.storages;
         let components = &mut world.components;
         let entities = &mut world.entities;
+        #[cfg(feature = "events")]
         let removed_components = &mut world.removed_components;
 
         let entity = self.entity;
@@ -812,6 +878,7 @@ impl<'w> EntityWorldMut<'w> {
                 take_component(
                     storages,
                     components,
+                    #[cfg(feature = "events")]
                     removed_components,
                     component_id,
                     entity,
@@ -959,6 +1026,7 @@ impl<'w> EntityWorldMut<'w> {
             )
         };
 
+        #[cfg(feature = "component_hooks")]
         if old_archetype.has_on_remove() {
             // SAFETY: All components in the archetype exist in world
             unsafe {
@@ -969,6 +1037,7 @@ impl<'w> EntityWorldMut<'w> {
         let old_archetype = &world.archetypes[location.archetype_id];
         for component_id in bundle_info.iter_components() {
             if old_archetype.contains(component_id) {
+                #[cfg(feature = "events")]
                 world.removed_components.send(component_id, entity);
 
                 // Make sure to drop components stored in sparse sets.
@@ -1058,6 +1127,7 @@ impl<'w> EntityWorldMut<'w> {
             (&*archetype, world.into_deferred())
         };
 
+        #[cfg(feature = "component_hooks")]
         if archetype.has_on_remove() {
             // SAFETY: All components in the archetype exist in world
             unsafe {
@@ -1065,6 +1135,7 @@ impl<'w> EntityWorldMut<'w> {
             }
         }
 
+        #[cfg(feature = "events")]
         for component_id in archetype.components() {
             world.removed_components.send(component_id, self.entity);
         }
@@ -1708,6 +1779,7 @@ impl<'w> FilteredEntityRef<'w> {
 
     /// Retrieves the change ticks for the given component. This can be useful for implementing change
     /// detection in custom runtimes.
+    #[cfg(feature = "change_detection")]
     #[inline]
     pub fn get_change_ticks<T: Component>(&self) -> Option<ComponentTicks> {
         let id = self.entity.world().components().get_id(TypeId::of::<T>())?;
@@ -1723,6 +1795,7 @@ impl<'w> FilteredEntityRef<'w> {
     /// **You should prefer to use the typed API [`Self::get_change_ticks`] where possible and only
     /// use this in cases where the actual component types are not known at
     /// compile time.**
+    #[cfg(feature = "change_detection")]
     #[inline]
     pub fn get_change_ticks_by_id(&self, component_id: ComponentId) -> Option<ComponentTicks> {
         // SAFETY: We have read access so we must have the component
@@ -1966,6 +2039,7 @@ impl<'w> FilteredEntityMut<'w> {
     /// Retrieves the change ticks for the given component. This can be useful for implementing change
     /// detection in custom runtimes.
     #[inline]
+    #[cfg(feature = "change_detection")]
     pub fn get_change_ticks<T: Component>(&self) -> Option<ComponentTicks> {
         self.as_readonly().get_change_ticks::<T>()
     }
@@ -1976,6 +2050,7 @@ impl<'w> FilteredEntityMut<'w> {
     /// **You should prefer to use the typed API [`Self::get_change_ticks`] where possible and only
     /// use this in cases where the actual component types are not known at
     /// compile time.**
+    #[cfg(feature = "change_detection")]
     #[inline]
     pub fn get_change_ticks_by_id(&self, component_id: ComponentId) -> Option<ComponentTicks> {
         self.as_readonly().get_change_ticks_by_id(component_id)
@@ -2245,13 +2320,14 @@ fn sorted_remove<T: Eq + Ord + Copy>(source: &mut Vec<T>, remove: &[T]) {
 pub(crate) unsafe fn take_component<'a>(
     storages: &'a mut Storages,
     components: &Components,
-    removed_components: &mut RemovedComponentEvents,
+    #[cfg(feature = "events")] removed_components: &mut RemovedComponentEvents,
     component_id: ComponentId,
     entity: Entity,
     location: EntityLocation,
 ) -> OwningPtr<'a> {
     // SAFETY: caller promises component_id to be valid
     let component_info = unsafe { components.get_info_unchecked(component_id) };
+    #[cfg(feature = "events")]
     removed_components.send(component_id, entity);
     match component_info.storage_type() {
         StorageType::Table => {

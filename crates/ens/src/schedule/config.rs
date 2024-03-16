@@ -2,7 +2,6 @@ use ens_utils::all_tuples;
 
 use crate::{
     schedule::{
-        condition::{BoxedCondition, Condition},
         graph_utils::{Ambiguity, Dependency, DependencyKind, GraphInfo},
         set::{InternedSystemSet, IntoSystemSet, SystemSet},
         Chain,
@@ -10,6 +9,10 @@ use crate::{
     system::{BoxedSystem, IntoSystem, System},
 };
 
+#[cfg(feature = "run_conditions")]
+use crate::schedule::condition::{BoxedCondition, Condition};
+
+#[cfg(feature = "run_conditions")]
 fn new_condition<M>(condition: impl Condition<M>) -> BoxedCondition {
     let condition_system = IntoSystem::into_system(condition);
     assert!(
@@ -52,6 +55,7 @@ impl IntoSystemConfigs<()> for BoxedSystem<(), ()> {
 pub struct NodeConfig<T> {
     pub(crate) node: T,
     pub(crate) graph_info: GraphInfo,
+    #[cfg(feature = "run_conditions")]
     pub(crate) conditions: Vec<BoxedCondition>,
 }
 
@@ -67,6 +71,7 @@ pub enum NodeConfigs<T> {
         /// Configuration for each element of the tuple.
         configs: Vec<NodeConfigs<T>>,
         /// Run conditions applied to everything in the tuple.
+        #[cfg(feature = "run_conditions")]
         collective_conditions: Vec<BoxedCondition>,
         /// See [`Chain`] for usage.
         chained: Chain,
@@ -86,6 +91,7 @@ impl SystemConfigs {
                 sets,
                 ..Default::default()
             },
+            #[cfg(feature = "run_conditions")]
             conditions: Vec::new(),
         })
     }
@@ -170,6 +176,7 @@ impl<T> NodeConfigs<T> {
         }
     }
 
+    #[cfg(feature = "run_conditions")]
     fn distributive_run_if_inner<M>(&mut self, condition: impl Condition<M> + Clone) {
         match self {
             Self::NodeConfig(config) => {
@@ -213,6 +220,7 @@ impl<T> NodeConfigs<T> {
     ///
     /// This is useful if you have a run condition whose concrete type is unknown.
     /// Prefer `run_if` for run conditions whose type is known at compile time.
+    #[cfg(feature = "run_conditions")]
     pub fn run_if_dyn(&mut self, condition: BoxedCondition) {
         match self {
             Self::NodeConfig(config) => {
@@ -365,6 +373,7 @@ where
     /// Use [`run_if`](IntoSystemSetConfigs::run_if) on a [`SystemSet`] if you want to make sure
     /// that either all or none of the systems are run, or you don't want to evaluate the run
     /// condition for each contained system separately.
+    #[cfg(feature = "run_conditions")]
     fn distributive_run_if<M>(self, condition: impl Condition<M> + Clone) -> SystemConfigs {
         self.into_configs().distributive_run_if(condition)
     }
@@ -399,6 +408,7 @@ where
     ///
     /// Use [`distributive_run_if`](IntoSystemConfigs::distributive_run_if) if you want the
     /// condition to be evaluated for each individual system, right before one is run.
+    #[cfg(feature = "run_conditions")]
     fn run_if<M>(self, condition: impl Condition<M>) -> SystemConfigs {
         self.into_configs().run_if(condition)
     }
@@ -477,11 +487,13 @@ impl IntoSystemConfigs<()> for SystemConfigs {
         self
     }
 
+    #[cfg(feature = "run_conditions")]
     fn distributive_run_if<M>(mut self, condition: impl Condition<M> + Clone) -> SystemConfigs {
         self.distributive_run_if_inner(condition);
         self
     }
 
+    #[cfg(feature = "run_conditions")]
     fn run_if<M>(mut self, condition: impl Condition<M>) -> SystemConfigs {
         self.run_if_dyn(new_condition(condition));
         self
@@ -521,6 +533,7 @@ macro_rules! impl_system_collection {
                 let ($($sys,)*) = self;
                 SystemConfigs::Configs {
                     configs: vec![$($sys.into_configs(),)*],
+                    #[cfg(feature = "run_conditions")]
                     collective_conditions: Vec::new(),
                     chained: Chain::No,
                 }
@@ -547,6 +560,7 @@ impl SystemSetConfig {
         Self {
             node: set,
             graph_info: GraphInfo::default(),
+            #[cfg(feature = "run_conditions")]
             conditions: Vec::new(),
         }
     }
@@ -608,6 +622,7 @@ where
     ///
     /// The `Condition` will be evaluated at most once (per schedule run),
     /// the first time a system in this set(s) prepares to run.
+    #[cfg(feature = "run_conditions")]
     fn run_if<M>(self, condition: impl Condition<M>) -> SystemSetConfigs {
         self.into_configs().run_if(condition)
     }
@@ -685,6 +700,7 @@ impl IntoSystemSetConfigs for SystemSetConfigs {
         self
     }
 
+    #[cfg(feature = "run_conditions")]
     fn run_if<M>(mut self, condition: impl Condition<M>) -> SystemSetConfigs {
         self.run_if_dyn(new_condition(condition));
 
@@ -730,6 +746,7 @@ macro_rules! impl_system_set_collection {
                 let ($($set,)*) = self;
                 SystemSetConfigs::Configs {
                     configs: vec![$($set.into_configs(),)*],
+                    #[cfg(feature = "run_conditions")]
                     collective_conditions: Vec::new(),
                     chained: Chain::No,
                 }

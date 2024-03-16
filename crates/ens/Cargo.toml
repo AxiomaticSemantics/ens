@@ -2,26 +2,38 @@
 name = "ens"
 version = "0.14.0-dev"
 edition = "2021"
-description = "Bevy Engine's entity component system"
-homepage = "https://bevyengine.org"
-repository = "https://github.com/bevyengine/bevy"
+description = "Ens ECS"
+homepage = "https://github.com/AxiomaticSemantics/ens"
+repository = "https://github.com/AxiomaticSemantics/ens"
 license = "MIT OR Apache-2.0"
-keywords = ["ecs", "game", "bevy"]
-categories = ["game-engines", "data-structures"]
+keywords = ["ecs"]
+categories = ["data-structures"]
 
 [features]
 entity_mapper = []
+entity_hash = []
+derive_macros = ["ens_macros"]
 serialize = ["dep:serde"]
-trace = []
-events = []
+change_detection = ["ens_macros?/change_detection"]
+parallel_scope = []
+component_hooks = []
+run_conditions = []
+events = ["ens_macros?/events"]
+states = ["ens_macros?/states"]
 multi-threaded = ["ens_tasks/multi-threaded"]
-default = []
+single-threaded = ["ens_tasks/single-threaded"]
+simple = ["ens_tasks/simple"]
+log = []
+trace = []
+untyped_access = []
+
+default = ["multi-threaded", "derive_macros"]
 
 [dependencies]
 ens_ptr = { path = "../ens_ptr", version = "0.14.0-dev" }
 ens_tasks = { path = "../ens_tasks", version = "0.14.0-dev" }
 ens_utils = { path = "../ens_utils", version = "0.14.0-dev" }
-ens_macros = { path = "macros", version = "0.14.0-dev" }
+ens_macros = { path = "macros", optional = true, version = "0.14.0-dev" }
 
 petgraph = "0.6"
 bitflags = "2.3"
@@ -35,6 +47,7 @@ log = "0.4.21"
 
 [dev-dependencies]
 static_assertions = "1.1.0"
+rand = "0.8"
 
 [[example]]
 name = "events"

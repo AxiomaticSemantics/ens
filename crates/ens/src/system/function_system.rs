@@ -1,12 +1,15 @@
 use crate::{
     archetype::{ArchetypeComponentId, ArchetypeGeneration},
-    component::{ComponentId, Tick},
+    component::ComponentId,
     prelude::FromWorld,
     query::{Access, FilteredAccessSet},
     schedule::{InternedSystemSet, SystemSet},
-    system::{check_system_change_tick, ReadOnlySystemParam, System, SystemParam, SystemParamItem},
+    system::{ReadOnlySystemParam, System, SystemParam, SystemParamItem},
     world::{unsafe_world_cell::UnsafeWorldCell, World, WorldId},
 };
+
+#[cfg(feature = "change_detection")]
+use crate::{component::Tick, system::check_system_change_tick};
 
 use ens_utils::all_tuples;
 use std::{borrow::Cow, marker::PhantomData};
@@ -23,6 +26,7 @@ pub struct SystemMeta {
     // SystemParams from overriding each other
     is_send: bool,
     has_deferred: bool,
+    #[cfg(feature = "change_detection")]
     pub(crate) last_run: Tick,
 }
 
@@ -35,6 +39,7 @@ impl SystemMeta {
             component_access_set: FilteredAccessSet::default(),
             is_send: true,
             has_deferred: false,
+            #[cfg(feature = "change_detection")]
             last_run: Tick::new(0),
         }
     }
@@ -181,7 +186,10 @@ impl<Param: SystemParam> SystemState<Param> {
     /// manually before calling `get_manual{_mut}`.
     pub fn new(world: &mut World) -> Self {
         let mut meta = SystemMeta::new::<Param>();
-        meta.last_run = world.change_tick().relative_to(Tick::MAX);
+        #[cfg(feature = "change_detection")]
+        {
+            meta.last_run = world.change_tick().relative_to(Tick::MAX);
+        }
         let param_state = Param::init_state(world, &mut meta);
         Self {
             meta,
@@ -296,10 +304,18 @@ impl<Param: SystemParam> SystemState<Param> {
         Param: ReadOnlySystemParam,
     {
         self.validate_world(world.id());
-        let change_tick = world.read_change_tick();
-        // SAFETY: Param is read-only and doesn't allow mutable access to World.
-        // It also matches the World this SystemState was created with.
-        unsafe { self.fetch(world.as_unsafe_world_cell_readonly(), change_tick) }
+        #[cfg(feature = "change_detection")]
+        {
+            let change_tick = world.read_change_tick();
+            // SAFETY: Param is read-only and doesn't allow mutable access to World.
+            // It also matches the World this SystemState was created with.
+            unsafe { self.fetch(world.as_unsafe_world_cell_readonly(), change_tick) }
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
+            unsafe { self.fetch(world.as_unsafe_world_cell_readonly()) }
+        }
     }
 
     /// Retrieve the mutable [`SystemParam`] values.  This will not update the state's view of the world's archetypes
@@ -315,9 +331,18 @@ impl<Param: SystemParam> SystemState<Param> {
         world: &'w mut World,
     ) -> SystemParamItem<'w, 's, Param> {
         self.validate_world(world.id());
-        let change_tick = world.change_tick();
-        // SAFETY: World is uniquely borrowed and matches the World this SystemState was created with.
-        unsafe { self.fetch(world.as_unsafe_world_cell(), change_tick) }
+        #[cfg(feature = "change_detection")]
+        {
+            let change_tick = world.change_tick();
+            // SAFETY: World is uniquely borrowed and matches the World this SystemState was created with.
+            unsafe { self.fetch(world.as_unsafe_world_cell(), change_tick) }
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
+            // SAFETY: World is uniquely borrowed and matches the World this SystemState was created with.
+            unsafe { self.fetch(world.as_unsafe_world_cell()) }
+        }
     }
 
     /// Retrieve the [`SystemParam`] values. This will not update archetypes automatically.
@@ -331,9 +356,18 @@ impl<Param: SystemParam> SystemState<Param> {
         &'s mut self,
         world: UnsafeWorldCell<'w>,
     ) -> SystemParamItem<'w, 's, Param> {
-        let change_tick = world.increment_change_tick();
-        // SAFETY: The invariants are uphold by the caller.
-        unsafe { self.fetch(world, change_tick) }
+        #[cfg(feature = "change_detection")]
+        {
+            let change_tick = world.increment_change_tick();
+            // SAFETY: The invariants are uphold by the caller.
+            unsafe { self.fetch(world, change_tick) }
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
+            // SAFETY: The invariants are uphold by the caller.
+            unsafe { self.fetch(world) }
+        }
     }
 
     /// # Safety
@@ -344,13 +378,22 @@ impl<Param: SystemParam> SystemState<Param> {
     unsafe fn fetch<'w, 's>(
         &'s mut self,
         world: UnsafeWorldCell<'w>,
-        change_tick: Tick,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
     ) -> SystemParamItem<'w, 's, Param> {
-        // SAFETY: The invariants are uphold by the caller.
-        let param =
-            unsafe { Param::get_param(&mut self.param_state, &self.meta, world, change_tick) };
-        self.meta.last_run = change_tick;
-        param
+        #[cfg(feature = "change_detection")]
+        {
+            // SAFETY: The invariants are uphold by the caller.
+            let param =
+                unsafe { Param::get_param(&mut self.param_state, &self.meta, world, change_tick) };
+            self.meta.last_run = change_tick;
+
+            param
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
+            unsafe { Param::get_param(&mut self.param_state, &self.meta, world) }
+        }
     }
 }
 
@@ -472,8 +515,6 @@ where
 
     #[inline]
     unsafe fn run_unsafe(&mut self, input: Self::In, world: UnsafeWorldCell) -> Self::Out {
-        let change_tick = world.increment_change_tick();
-
         // SAFETY:
         // - The caller has invoked `update_archetype_component_access`, which will panic
         //   if the world does not match.
@@ -484,12 +525,21 @@ where
                 self.param_state.as_mut().expect(Self::PARAM_MESSAGE),
                 &self.system_meta,
                 world,
-                change_tick,
+                #[cfg(feature = "change_detection")]
+                world.increment_change_tick(),
             )
         };
-        let out = self.func.run(input, params);
-        self.system_meta.last_run = change_tick;
-        out
+
+        #[cfg(feature = "change_detection")]
+        {
+            let out = self.func.run(input, params);
+            self.system_meta.last_run = world.change_tick();
+            out
+        }
+        #[cfg(not(feature = "change_detection"))]
+        {
+            self.func.run(input, params)
+        }
     }
 
     #[inline]
@@ -501,7 +551,12 @@ where
     #[inline]
     fn initialize(&mut self, world: &mut World) {
         self.world_id = Some(world.id());
-        self.system_meta.last_run = world.change_tick().relative_to(Tick::MAX);
+
+        #[cfg(feature = "change_detection")]
+        {
+            self.system_meta.last_run = world.change_tick().relative_to(Tick::MAX);
+        }
+
         self.param_state = Some(F::Param::init_state(world, &mut self.system_meta));
     }
 
@@ -517,6 +572,7 @@ where
         }
     }
 
+    #[cfg(feature = "change_detection")]
     #[inline]
     fn check_change_tick(&mut self, change_tick: Tick) {
         check_system_change_tick(
@@ -531,10 +587,12 @@ where
         vec![set.intern()]
     }
 
+    #[cfg(feature = "change_detection")]
     fn get_last_run(&self) -> Tick {
         self.system_meta.last_run
     }
 
+    #[cfg(feature = "change_detection")]
     fn set_last_run(&mut self, last_run: Tick) {
         self.system_meta.last_run = last_run;
     }

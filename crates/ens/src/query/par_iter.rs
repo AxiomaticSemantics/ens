@@ -1,4 +1,8 @@
-use crate::{component::Tick, world::unsafe_world_cell::UnsafeWorldCell};
+use crate::world::unsafe_world_cell::UnsafeWorldCell;
+
+#[cfg(feature = "change_detection")]
+use crate::component::Tick;
+
 use std::ops::Range;
 
 use super::{QueryData, QueryFilter, QueryItem, QueryState};
@@ -85,7 +89,9 @@ impl BatchingStrategy {
 pub struct QueryParIter<'w, 's, D: QueryData, F: QueryFilter> {
     pub(crate) world: UnsafeWorldCell<'w>,
     pub(crate) state: &'s QueryState<D, F>,
+    #[cfg(feature = "change_detection")]
     pub(crate) last_run: Tick,
+    #[cfg(feature = "change_detection")]
     pub(crate) this_run: Tick,
     pub(crate) batching_strategy: BatchingStrategy,
 }
@@ -130,7 +136,13 @@ impl<'w, 's, D: QueryData, F: QueryFilter> QueryParIter<'w, 's, D, F> {
                 // SAFETY: See the safety comment above.
                 unsafe {
                     self.state
-                        .iter_unchecked_manual(self.world, self.last_run, self.this_run)
+                        .iter_unchecked_manual(
+                            self.world,
+                            #[cfg(feature = "change_detection")]
+                            self.last_run,
+                            #[cfg(feature = "change_detection")]
+                            self.this_run,
+                        )
                         .for_each(func);
                 }
             } else {
@@ -142,7 +154,9 @@ impl<'w, 's, D: QueryData, F: QueryFilter> QueryParIter<'w, 's, D, F> {
                         self.world,
                         batch_size,
                         func,
+                        #[cfg(feature = "change_detection")]
                         self.last_run,
+                        #[cfg(feature = "change_detection")]
                         self.this_run,
                     );
                 }

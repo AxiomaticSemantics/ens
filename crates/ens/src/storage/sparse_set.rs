@@ -1,8 +1,12 @@
 use crate::{
-    component::{ComponentId, ComponentInfo, ComponentTicks, Tick, TickCells},
+    component::{ComponentId, ComponentInfo},
     entity::Entity,
     storage::{Column, TableRow},
 };
+
+#[cfg(feature = "change_detection")]
+use crate::component::{ComponentTicks, Tick, TickCells};
+
 use ens_ptr::{OwningPtr, Ptr};
 use nonmax::NonMaxUsize;
 use std::{cell::UnsafeCell, hash::Hash, marker::PhantomData};
@@ -168,15 +172,24 @@ impl ComponentSparseSet {
         &mut self,
         entity: Entity,
         value: OwningPtr<'_>,
-        change_tick: Tick,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
     ) {
         if let Some(&dense_index) = self.sparse.get(entity.index()) {
             #[cfg(debug_assertions)]
             assert_eq!(entity, self.entities[dense_index.as_usize()]);
-            self.dense.replace(dense_index, value, change_tick);
+            self.dense.replace(
+                dense_index,
+                value,
+                #[cfg(feature = "change_detection")]
+                change_tick,
+            );
         } else {
             let dense_index = self.dense.len();
-            self.dense.push(value, ComponentTicks::new(change_tick));
+            self.dense.push(
+                value,
+                #[cfg(feature = "change_detection")]
+                ComponentTicks::new(change_tick),
+            );
             self.sparse
                 .insert(entity.index(), TableRow::from_usize(dense_index));
             #[cfg(debug_assertions)]
@@ -221,6 +234,7 @@ impl ComponentSparseSet {
     /// Returns references to the entity's component value and its added and changed ticks.
     ///
     /// Returns `None` if `entity` does not have a component in the sparse set.
+    #[cfg(feature = "change_detection")]
     #[inline]
     pub fn get_with_ticks(&self, entity: Entity) -> Option<(Ptr<'_>, TickCells<'_>)> {
         let dense_index = *self.sparse.get(entity.index())?;
@@ -241,6 +255,7 @@ impl ComponentSparseSet {
     /// Returns a reference to the "added" tick of the entity's component value.
     ///
     /// Returns `None` if `entity` does not have a component in the sparse set.
+    #[cfg(feature = "change_detection")]
     #[inline]
     pub fn get_added_tick(&self, entity: Entity) -> Option<&UnsafeCell<Tick>> {
         let dense_index = *self.sparse.get(entity.index())?;
@@ -253,6 +268,8 @@ impl ComponentSparseSet {
     /// Returns a reference to the "changed" tick of the entity's component value.
     ///
     /// Returns `None` if `entity` does not have a component in the sparse set.
+
+    #[cfg(feature = "change_detection")]
     #[inline]
     pub fn get_changed_tick(&self, entity: Entity) -> Option<&UnsafeCell<Tick>> {
         let dense_index = *self.sparse.get(entity.index())?;
@@ -265,6 +282,7 @@ impl ComponentSparseSet {
     /// Returns a reference to the "added" and "changed" ticks of the entity's component value.
     ///
     /// Returns `None` if `entity` does not have a component in the sparse set.
+    #[cfg(feature = "change_detection")]
     #[inline]
     pub fn get_ticks(&self, entity: Entity) -> Option<ComponentTicks> {
         let dense_index = *self.sparse.get(entity.index())?;
@@ -283,17 +301,37 @@ impl ComponentSparseSet {
             assert_eq!(entity, self.entities[dense_index.as_usize()]);
             self.entities.swap_remove(dense_index.as_usize());
             let is_last = dense_index.as_usize() == self.dense.len() - 1;
+
             // SAFETY: dense_index was just removed from `sparse`, which ensures that it is valid
-            let (value, _) = unsafe { self.dense.swap_remove_and_forget_unchecked(dense_index) };
-            if !is_last {
-                let swapped_entity = self.entities[dense_index.as_usize()];
-                #[cfg(not(debug_assertions))]
-                let index = swapped_entity;
-                #[cfg(debug_assertions)]
-                let index = swapped_entity.index();
-                *self.sparse.get_mut(index).unwrap() = dense_index;
+            #[cfg(feature = "change_detection")]
+            {
+                let (value, _) =
+                    unsafe { self.dense.swap_remove_and_forget_unchecked(dense_index) };
+                if !is_last {
+                    let swapped_entity = self.entities[dense_index.as_usize()];
+                    #[cfg(not(debug_assertions))]
+                    let index = swapped_entity;
+                    #[cfg(debug_assertions)]
+                    let index = swapped_entity.index();
+                    *self.sparse.get_mut(index).unwrap() = dense_index;
+                }
+                value
             }
-            value
+
+            #[cfg(not(feature = "change_detection"))]
+            {
+                let value = unsafe { self.dense.swap_remove_and_forget_unchecked(dense_index) };
+                if !is_last {
+                    let swapped_entity = self.entities[dense_index.as_usize()];
+                    #[cfg(not(debug_assertions))]
+                    let index = swapped_entity;
+                    #[cfg(debug_assertions)]
+                    let index = swapped_entity.index();
+                    *self.sparse.get_mut(index).unwrap() = dense_index;
+                }
+
+                value
+            }
         })
     }
 
@@ -324,6 +362,7 @@ impl ComponentSparseSet {
         }
     }
 
+    #[cfg(feature = "change_detection")]
     pub(crate) fn check_change_ticks(&mut self, change_tick: Tick) {
         self.dense.check_change_ticks(change_tick);
     }
@@ -614,6 +653,7 @@ impl SparseSets {
         }
     }
 
+    #[cfg(feature = "change_detection")]
     pub(crate) fn check_change_ticks(&mut self, change_tick: Tick) {
         for set in self.sets.values_mut() {
             set.check_change_ticks(change_tick);

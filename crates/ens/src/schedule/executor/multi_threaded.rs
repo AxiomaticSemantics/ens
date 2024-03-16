@@ -15,10 +15,13 @@ use crate::{
     archetype::ArchetypeComponentId,
     prelude::Resource,
     query::Access,
-    schedule::{is_apply_deferred, BoxedCondition, ExecutorKind, SystemExecutor, SystemSchedule},
+    schedule::{is_apply_deferred, ExecutorKind, SystemExecutor, SystemSchedule},
     system::BoxedSystem,
     world::{unsafe_world_cell::UnsafeWorldCell, World},
 };
+
+#[cfg(feature = "run_conditions")]
+use crate::schedule::BoxedCondition;
 
 use crate as ens;
 
@@ -29,9 +32,11 @@ struct Environment<'env, 'sys> {
     conditions: Mutex<Conditions<'sys>>,
     world_cell: UnsafeWorldCell<'env>,
 }
-
+ 
 struct Conditions<'a> {
+    #[cfg(feature = "run_conditions")]
     system_conditions: &'a mut [Vec<BoxedCondition>],
+    #[cfg(feature = "run_conditions")]
     set_conditions: &'a mut [Vec<BoxedCondition>],
     sets_with_conditions_of_systems: &'a [FixedBitSet],
     systems_in_sets_with_conditions: &'a [FixedBitSet],
@@ -47,7 +52,9 @@ impl<'env, 'sys> Environment<'env, 'sys> {
             executor,
             systems: SyncUnsafeCell::from_mut(schedule.systems.as_mut_slice()).as_slice_of_cells(),
             conditions: Mutex::new(Conditions {
+                #[cfg(feature = "run_conditions")]
                 system_conditions: &mut schedule.system_conditions,
+                #[cfg(feature = "run_conditions")]
                 set_conditions: &mut schedule.set_conditions,
                 sets_with_conditions_of_systems: &schedule.sets_with_conditions_of_systems,
                 systems_in_sets_with_conditions: &schedule.systems_in_sets_with_conditions,
@@ -456,6 +463,7 @@ impl ExecutorState {
         }
 
         // TODO: an earlier out if world's archetypes did not change
+        #[cfg(feature = "run_conditions")]
         for set_idx in conditions.sets_with_conditions_of_systems[system_index]
             .difference(&self.evaluated_sets)
         {
@@ -470,6 +478,7 @@ impl ExecutorState {
             }
         }
 
+        #[cfg(feature = "run_conditions")]
         for condition in &mut conditions.system_conditions[system_index] {
             condition.update_archetype_component_access(world);
             if !condition
@@ -523,16 +532,23 @@ impl ExecutorState {
             // - The caller ensures that `world` has permission to read any data
             //   required by the conditions.
             // - `update_archetype_component_access` has been called for each run condition.
-            let set_conditions_met = unsafe {
-                evaluate_and_fold_conditions(&mut conditions.set_conditions[set_idx], world)
-            };
+            #[cfg(feature = "run_conditions")] {
+                let set_conditions_met = unsafe {
+                    evaluate_and_fold_conditions(&mut conditions.set_conditions[set_idx], world)
+                };
 
-            if !set_conditions_met {
-                self.skipped_systems
-                    .union_with(&conditions.systems_in_sets_with_conditions[set_idx]);
+                if !set_conditions_met {
+                    self.skipped_systems
+                        .union_with(&conditions.systems_in_sets_with_conditions[set_idx]);
+                }
+
+                should_run &= set_conditions_met;
             }
 
-            should_run &= set_conditions_met;
+            #[cfg(not(feature = "run_conditions"))] {
+                should_run &= true;
+            }
+
             self.evaluated_sets.insert(set_idx);
         }
 
@@ -541,15 +557,21 @@ impl ExecutorState {
         // - The caller ensures that `world` has permission to read any data
         //   required by the conditions.
         // - `update_archetype_component_access` has been called for each run condition.
-        let system_conditions_met = unsafe {
-            evaluate_and_fold_conditions(&mut conditions.system_conditions[system_index], world)
-        };
+        #[cfg(feature = "run_conditions")] {
+            let system_conditions_met = unsafe {
+                evaluate_and_fold_conditions(&mut conditions.system_conditions[system_index], world)
+            };
 
-        if !system_conditions_met {
-            self.skipped_systems.insert(system_index);
+            if !system_conditions_met {
+                self.skipped_systems.insert(system_index);
+            }
+
+            should_run &= system_conditions_met;
         }
 
-        should_run &= system_conditions_met;
+        #[cfg(feature = "run_conditions")] {
+            should_run &= true;
+        }
 
         should_run
     }
@@ -716,6 +738,7 @@ fn apply_deferred(
 ///   required by `conditions`.
 /// - `update_archetype_component_access` must have been called
 ///   with `world` for each condition in `conditions`.
+#[cfg(feature = "run_conditions")]
 unsafe fn evaluate_and_fold_conditions(
     conditions: &mut [BoxedCondition],
     world: UnsafeWorldCell,

@@ -13,19 +13,22 @@ use thiserror::Error;
 
 use crate::{
     self as ens,
-    component::{ComponentId, Components, Tick},
+    component::{ComponentId, Components},
     prelude::Component,
     schedule::*,
     system::{BoxedSystem, IntoSystem, Resource, System},
     world::World,
 };
 
+#[cfg(feature = "change_detection")]
+use crate::component::Tick;
+
 /// Resource that stores [`Schedule`]s mapped to [`ScheduleLabel`]s excluding the current running [`Schedule`].
 #[derive(Default, Resource)]
 pub struct Schedules {
     inner: HashMap<InternedScheduleLabel, Schedule>,
     /// List of [`ComponentId`]s to ignore when reporting system order ambiguity conflicts
-    pub ignored_scheduling_ambiguities: BTreeSet<ComponentId>,
+    pub ignored_ambiguities: BTreeSet<ComponentId>,
 }
 
 impl Schedules {
@@ -33,7 +36,7 @@ impl Schedules {
     pub fn new() -> Self {
         Self {
             inner: HashMap::new(),
-            ignored_scheduling_ambiguities: BTreeSet::new(),
+            ignored_ambiguities: BTreeSet::new(),
         }
     }
 
@@ -89,6 +92,7 @@ impl Schedules {
     /// Iterates the change ticks of all systems in all stored schedules and clamps any older than
     /// [`MAX_CHANGE_AGE`](crate::change_detection::MAX_CHANGE_AGE).
     /// This prevents overflow and thus prevents false positives.
+    #[cfg(feature = "change_detection")]
     pub(crate) fn check_change_ticks(&mut self, change_tick: Tick) {
         for (_, schedule) in &mut self.inner {
             schedule.check_change_ticks(change_tick);
@@ -104,19 +108,18 @@ impl Schedules {
 
     /// Ignore system order ambiguities caused by conflicts on [`Component`]s of type `T`.
     pub fn allow_ambiguous_component<T: Component>(&mut self, world: &mut World) {
-        self.ignored_scheduling_ambiguities
-            .insert(world.init_component::<T>());
+        self.ignored_ambiguities.insert(world.init_component::<T>());
     }
 
     /// Ignore system order ambiguities caused by conflicts on [`Resource`]s of type `T`.
     pub fn allow_ambiguous_resource<T: Resource>(&mut self, world: &mut World) {
-        self.ignored_scheduling_ambiguities
+        self.ignored_ambiguities
             .insert(world.components.init_resource::<T>());
     }
 
     /// Iterate through the [`ComponentId`]'s that will be ignored.
     pub fn iter_ignored_ambiguities(&self) -> impl Iterator<Item = &ComponentId> + '_ {
-        self.ignored_scheduling_ambiguities.iter()
+        self.ignored_ambiguities.iter()
     }
 
     /// Prints the names of the components and resources with [`info`]
@@ -137,8 +140,11 @@ impl Schedules {
 
 fn make_executor(kind: ExecutorKind) -> Box<dyn SystemExecutor> {
     match kind {
+        #[cfg(feature = "simple")]
         ExecutorKind::Simple => Box::new(SimpleExecutor::new()),
+        #[cfg(feature = "single-threaded")]
         ExecutorKind::SingleThreaded => Box::new(SingleThreadedExecutor::new()),
+        #[cfg(feature = "multi-threaded")]
         ExecutorKind::MultiThreaded => Box::new(MultiThreadedExecutor::new()),
     }
 }
@@ -248,18 +254,10 @@ impl Schedule {
         let b = b.into_system_set();
 
         let Some(&a_id) = self.graph.system_set_ids.get(&a.intern()) else {
-            panic!(
-                "Could not mark system as ambiguous, `{:?}` was not found in the schedule.
-                Did you try to call `ambiguous_with` before adding the system to the world?",
-                a
-            );
+            panic!("Could not mark system as ambiguous, `{a:?}` was not found in the schedule.");
         };
         let Some(&b_id) = self.graph.system_set_ids.get(&b.intern()) else {
-            panic!(
-                "Could not mark system as ambiguous, `{:?}` was not found in the schedule.
-                Did you try to call `ambiguous_with` before adding the system to the world?",
-                b
-            );
+            panic!("Could not mark system as ambiguous, `{b:?}` was not found in the schedule.");
         };
 
         self.graph.ambiguous_with.add_edge(a_id, b_id, ());
@@ -310,6 +308,7 @@ impl Schedule {
 
     /// Runs all systems in this schedule on the `world`, using its current execution strategy.
     pub fn run(&mut self, world: &mut World) {
+        #[cfg(feature = "change_detection")]
         world.check_change_ticks();
         self.initialize(world)
             .unwrap_or_else(|e| panic!("Error when initializing schedule {:?}: {e}", self.label));
@@ -326,7 +325,7 @@ impl Schedule {
             self.graph.initialize(world);
             let ignored_ambiguities = world
                 .get_resource_or_insert_with::<Schedules>(Schedules::default)
-                .ignored_scheduling_ambiguities
+                .ignored_ambiguities
                 .clone();
             self.graph.update_schedule(
                 &mut self.executable,
@@ -364,6 +363,7 @@ impl Schedule {
     /// Iterates the change ticks of all systems in the schedule and clamps any older than
     /// [`MAX_CHANGE_AGE`](crate::change_detection::MAX_CHANGE_AGE).
     /// This prevents overflow and thus prevents false positives.
+    #[cfg(feature = "change_detection")]
     pub(crate) fn check_change_ticks(&mut self, change_tick: Tick) {
         for system in &mut self.executable.systems {
             if !is_apply_deferred(system) {
@@ -507,8 +507,10 @@ impl SystemNode {
 #[derive(Default)]
 pub struct ScheduleGraph {
     systems: Vec<SystemNode>,
+    #[cfg(feature = "run_conditions")]
     system_conditions: Vec<Vec<BoxedCondition>>,
     system_sets: Vec<SystemSetNode>,
+    #[cfg(feature = "run_conditions")]
     system_set_conditions: Vec<Vec<BoxedCondition>>,
     system_set_ids: HashMap<InternedSystemSet, NodeId>,
     uninit: Vec<(NodeId, usize)>,
@@ -529,8 +531,10 @@ impl ScheduleGraph {
     pub fn new() -> Self {
         Self {
             systems: Vec::new(),
+            #[cfg(feature = "run_conditions")]
             system_conditions: Vec::new(),
             system_sets: Vec::new(),
+            #[cfg(feature = "run_conditions")]
             system_set_conditions: Vec::new(),
             system_set_ids: HashMap::new(),
             uninit: Vec::new(),
@@ -550,7 +554,8 @@ impl ScheduleGraph {
     /// Returns the system at the given [`NodeId`], if it exists.
     pub fn get_system_at(&self, id: NodeId) -> Option<&dyn System<In = (), Out = ()>> {
         if !id.is_system() {
-            return None;
+            panic!("no fuckin way bud");
+            //return None;
         }
         self.systems
             .get(id.index())
@@ -586,6 +591,7 @@ impl ScheduleGraph {
     }
 
     /// Returns an iterator over all systems in this schedule.
+    #[cfg(feature = "run_conditions")]
     pub fn systems(
         &self,
     ) -> impl Iterator<Item = (NodeId, &dyn System<In = (), Out = ()>, &[BoxedCondition])> {
@@ -599,13 +605,34 @@ impl ScheduleGraph {
             })
     }
 
+    #[cfg(not(feature = "run_conditions"))]
+    pub fn systems(&self) -> impl Iterator<Item = (NodeId, &dyn System<In = (), Out = ()>)> {
+        self.systems
+            .iter()
+            .enumerate()
+            .filter_map(|(i, system_node)| {
+                let system = system_node.inner.as_deref()?;
+                Some((NodeId::System(i), system))
+            })
+    }
+
     /// Returns an iterator over all system sets in this schedule.
+    #[cfg(feature = "run_conditions")]
     pub fn system_sets(&self) -> impl Iterator<Item = (NodeId, &dyn SystemSet, &[BoxedCondition])> {
         self.system_set_ids.iter().map(|(_, &node_id)| {
             let set_node = &self.system_sets[node_id.index()];
             let set = &*set_node.inner;
             let conditions = self.system_set_conditions[node_id.index()].as_slice();
             (node_id, set, conditions)
+        })
+    }
+
+    #[cfg(not(feature = "run_conditions"))]
+    pub fn system_sets(&self) -> impl Iterator<Item = (NodeId, &dyn SystemSet)> {
+        self.system_set_ids.iter().map(|(_, &node_id)| {
+            let set_node = &self.system_sets[node_id.index()];
+            let set = &*set_node.inner;
+            (node_id, set)
         })
     }
 
@@ -631,6 +658,14 @@ impl ScheduleGraph {
     /// Must be called after [`ScheduleGraph::build_schedule`] to be non-empty.
     pub fn conflicting_systems(&self) -> &[(NodeId, NodeId, Vec<ComponentId>)] {
         &self.conflicting_systems
+    }
+
+    fn add_edge(&mut self, chained: &Chain, lhs: NodeId, rhs: NodeId) {
+        self.dependency.graph.add_edge(lhs, rhs, ());
+
+        if chained == &Chain::YesIgnoreDeferred {
+            self.no_sync_edges.insert((lhs, rhs));
+        }
     }
 
     /// Adds the config nodes to the graph.
@@ -664,8 +699,8 @@ impl ScheduleGraph {
             }
             NodeConfigs::Configs {
                 mut configs,
-                collective_conditions,
                 chained,
+                collective_conditions,
             } => {
                 let more_than_one_entry = configs.len() > 1;
                 if !collective_conditions.is_empty() {
@@ -756,7 +791,7 @@ impl ScheduleGraph {
                             (false, false) => {
                                 for previous_node in &previous_result.nodes {
                                     for current_node in &current_result.nodes {
-                                        self.dependency.graph.add_edge(
+                                        /*self.dependency.graph.add_edge(
                                             *previous_node,
                                             *current_node,
                                             (),
@@ -765,7 +800,8 @@ impl ScheduleGraph {
                                         if chained == Chain::YesIgnoreDeferred {
                                             self.no_sync_edges
                                                 .insert((*previous_node, *current_node));
-                                        }
+                                        }*/
+                                        self.add_edge(&chained, *previous_node, *current_node);
                                     }
                                 }
                             }
@@ -814,6 +850,7 @@ impl ScheduleGraph {
         // system init has to be deferred (need `&mut World`)
         self.uninit.push((id, 0));
         self.systems.push(SystemNode::new(config.node));
+        #[cfg(feature = "run_conditions")]
         self.system_conditions.push(config.conditions);
 
         Ok(id)
@@ -825,10 +862,17 @@ impl ScheduleGraph {
     }
 
     fn configure_set_inner(&mut self, set: SystemSetConfig) -> Result<NodeId, ScheduleBuildError> {
+        #[cfg(feature = "run_conditions")]
         let SystemSetConfig {
             node: set,
             graph_info,
             mut conditions,
+        } = set;
+
+        #[cfg(not(feature = "run_conditions"))]
+        let SystemSetConfig {
+            node: set,
+            graph_info,
         } = set;
 
         let id = match self.system_set_ids.get(&set) {
@@ -840,9 +884,13 @@ impl ScheduleGraph {
         self.update_graphs(id, graph_info)?;
 
         // system init has to be deferred (need `&mut World`)
-        let system_set_conditions = &mut self.system_set_conditions[id.index()];
-        self.uninit.push((id, system_set_conditions.len()));
-        system_set_conditions.append(&mut conditions);
+
+        #[cfg(feature = "run_conditions")]
+        {
+            let system_set_conditions = &mut self.system_set_conditions[id.index()];
+            self.uninit.push((id, system_set_conditions.len()));
+            system_set_conditions.append(&mut conditions);
+        }
 
         Ok(id)
     }
@@ -850,6 +898,7 @@ impl ScheduleGraph {
     fn add_set(&mut self, set: InternedSystemSet) -> NodeId {
         let id = NodeId::Set(self.system_sets.len());
         self.system_sets.push(SystemSetNode::new(set));
+        #[cfg(feature = "run_conditions")]
         self.system_set_conditions.push(Vec::new());
         self.system_set_ids.insert(set, id);
         id
@@ -989,11 +1038,13 @@ impl ScheduleGraph {
             match id {
                 NodeId::System(index) => {
                     self.systems[index].get_mut().unwrap().initialize(world);
+                    #[cfg(feature = "run_conditions")]
                     for condition in &mut self.system_conditions[index] {
                         condition.initialize(world);
                     }
                 }
                 NodeId::Set(index) => {
+                    #[cfg(feature = "run_conditions")]
                     for condition in self.system_set_conditions[index].iter_mut().skip(i) {
                         condition.initialize(world);
                     }
@@ -1132,6 +1183,7 @@ impl ScheduleGraph {
             .push(SystemNode::new(Box::new(IntoSystem::into_system(
                 apply_deferred,
             ))));
+        #[cfg(feature = "run_conditions")]
         self.system_conditions.push(Vec::new());
 
         // ignore ambiguities with auto sync points
@@ -1376,45 +1428,60 @@ impl ScheduleGraph {
 
         // get the rows and columns of the hierarchy graph's reachability matrix
         // (needed to we can evaluate conditions in the correct order)
-        let mut systems_in_sets_with_conditions =
-            vec![FixedBitSet::with_capacity(sys_count); set_with_conditions_count];
-        for (i, &row) in hg_set_with_conditions_idxs.iter().enumerate() {
-            let bitset = &mut systems_in_sets_with_conditions[i];
+        #[cfg(feature = "run_conditions")]
+        {
+            let mut systems_in_sets_with_conditions =
+                vec![FixedBitSet::with_capacity(sys_count); set_with_conditions_count];
+            for (i, &row) in hg_set_with_conditions_idxs.iter().enumerate() {
+                let bitset = &mut systems_in_sets_with_conditions[i];
+                for &(col, sys_id) in &hg_systems {
+                    let idx = dg_system_idx_map[&sys_id];
+                    let is_descendant = hier_results_reachable[index(row, col, hg_node_count)];
+                    bitset.set(idx, is_descendant);
+                }
+            }
+
+            let mut sets_with_conditions_of_systems =
+                vec![FixedBitSet::with_capacity(set_with_conditions_count); sys_count];
             for &(col, sys_id) in &hg_systems {
-                let idx = dg_system_idx_map[&sys_id];
-                let is_descendant = hier_results_reachable[index(row, col, hg_node_count)];
-                bitset.set(idx, is_descendant);
+                let i = dg_system_idx_map[&sys_id];
+                let bitset = &mut sets_with_conditions_of_systems[i];
+                for (idx, &row) in hg_set_with_conditions_idxs
+                    .iter()
+                    .enumerate()
+                    .take_while(|&(_idx, &row)| row < col)
+                {
+                    let is_ancestor = hier_results_reachable[index(row, col, hg_node_count)];
+                    bitset.set(idx, is_ancestor);
+                }
+            }
+
+            SystemSchedule {
+                systems: Vec::with_capacity(sys_count),
+                system_conditions: Vec::with_capacity(sys_count),
+                set_conditions: Vec::with_capacity(set_with_conditions_count),
+                system_ids: dg_system_ids,
+                set_ids: hg_set_ids,
+                system_dependencies,
+                system_dependents,
+                sets_with_conditions_of_systems,
+                systems_in_sets_with_conditions,
             }
         }
 
-        let mut sets_with_conditions_of_systems =
-            vec![FixedBitSet::with_capacity(set_with_conditions_count); sys_count];
-        for &(col, sys_id) in &hg_systems {
-            let i = dg_system_idx_map[&sys_id];
-            let bitset = &mut sets_with_conditions_of_systems[i];
-            for (idx, &row) in hg_set_with_conditions_idxs
-                .iter()
-                .enumerate()
-                .take_while(|&(_idx, &row)| row < col)
-            {
-                let is_ancestor = hier_results_reachable[index(row, col, hg_node_count)];
-                bitset.set(idx, is_ancestor);
+        #[cfg(not(feature = "run_conditions"))]
+        {
+            SystemSchedule {
+                systems: Vec::with_capacity(sys_count),
+                system_ids: dg_system_ids,
+                set_ids: hg_set_ids,
+                system_dependencies,
+                system_dependents,
             }
-        }
-
-        SystemSchedule {
-            systems: Vec::with_capacity(sys_count),
-            system_conditions: Vec::with_capacity(sys_count),
-            set_conditions: Vec::with_capacity(set_with_conditions_count),
-            system_ids: dg_system_ids,
-            set_ids: hg_set_ids,
-            system_dependencies,
-            system_dependents,
-            sets_with_conditions_of_systems,
-            systems_in_sets_with_conditions,
         }
     }
 
+    #[cfg(feature = "change_detection")]
     fn update_schedule(
         &mut self,
         schedule: &mut SystemSchedule,
@@ -1458,6 +1525,38 @@ impl ScheduleGraph {
         for &id in &schedule.set_ids {
             let conditions = std::mem::take(&mut self.system_set_conditions[id.index()]);
             schedule.set_conditions.push(conditions);
+        }
+
+        Ok(())
+    }
+
+    #[cfg(not(feature = "run_conditions"))]
+    fn update_schedule(
+        &mut self,
+        schedule: &mut SystemSchedule,
+        components: &Components,
+        ignored_ambiguities: &BTreeSet<ComponentId>,
+        schedule_label: InternedScheduleLabel,
+    ) -> Result<(), ScheduleBuildError> {
+        if !self.uninit.is_empty() {
+            return Err(ScheduleBuildError::Uninitialized);
+        }
+
+        // move systems out of old schedule
+        for (id, system) in schedule
+            .system_ids
+            .drain(..)
+            .zip(schedule.systems.drain(..))
+        {
+            self.systems[id.index()].inner = Some(system);
+        }
+
+        *schedule = self.build_schedule(components, schedule_label, ignored_ambiguities)?;
+
+        // move systems into new schedule
+        for &id in &schedule.system_ids {
+            let system = self.systems[id.index()].inner.take().unwrap();
+            schedule.systems.push(system);
         }
 
         Ok(())
@@ -1532,6 +1631,8 @@ impl ScheduleGraph {
                 }
             }
         };
+
+        #[cfg(feature = "short_names")]
         if self.settings.use_shortnames {
             name = ens_utils::get_short_name(&name);
         }

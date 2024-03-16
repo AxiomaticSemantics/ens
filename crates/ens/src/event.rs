@@ -1,9 +1,14 @@
 //! Event handling types.
 
 use crate as ens;
-use crate::system::{Local, Res, ResMut, Resource, SystemParam};
+use crate::{
+    access::{Res, ResMut},
+    system::{Local, Resource, SystemParam},
+};
 
+#[cfg(all(feature = "derive_macros", feature = "events"))]
 pub use ens_macros::Event;
+#[cfg(feature = "derive_macros")]
 use ens_macros::SystemSet;
 
 use std::ops::{Deref, DerefMut};

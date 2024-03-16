@@ -3,13 +3,12 @@ use std::{borrow::Cow, cell::UnsafeCell, marker::PhantomData};
 use ens_ptr::UnsafeCellDeref;
 
 use crate::{
-    archetype::ArchetypeComponentId,
-    component::{ComponentId, Tick},
-    prelude::World,
-    query::Access,
-    schedule::InternedSystemSet,
-    world::unsafe_world_cell::UnsafeWorldCell,
+    archetype::ArchetypeComponentId, component::ComponentId, prelude::World, query::Access,
+    schedule::InternedSystemSet, world::unsafe_world_cell::UnsafeWorldCell,
 };
+
+#[cfg(feature = "change_detection")]
+use crate::component::Tick;
 
 use super::{ReadOnlySystem, System};
 
@@ -214,6 +213,7 @@ where
             .extend(self.b.archetype_component_access());
     }
 
+    #[cfg(feature = "change_detection")]
     fn check_change_tick(&mut self, change_tick: Tick) {
         self.a.check_change_tick(change_tick);
         self.b.check_change_tick(change_tick);
@@ -225,10 +225,12 @@ where
         default_sets
     }
 
+    #[cfg(feature = "change_detection")]
     fn get_last_run(&self) -> Tick {
         self.a.get_last_run()
     }
 
+    #[cfg(feature = "change_detection")]
     fn set_last_run(&mut self, last_run: Tick) {
         self.a.set_last_run(last_run);
         self.b.set_last_run(last_run);

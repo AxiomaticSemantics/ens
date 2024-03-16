@@ -1,11 +1,14 @@
 use crate::{
     archetype::Archetype,
-    component::{ComponentId, Tick},
+    component::ComponentId,
     entity::Entity,
     query::FilteredAccess,
     storage::{Table, TableRow},
     world::{unsafe_world_cell::UnsafeWorldCell, World},
 };
+
+#[cfg(feature = "change_detection")]
+use crate::component::Tick;
 
 use ens_utils::all_tuples;
 
@@ -21,8 +24,7 @@ use ens_utils::all_tuples;
 /// - For each component mutably accessed by [`fetch`], [`update_component_access`] should add write access unless read or write access has already been added, in which case it should panic.
 /// - For each component readonly accessed by [`fetch`], [`update_component_access`] should add read access unless write access has already been added, in which case it should panic.
 /// - If `fetch` mutably accesses the same component twice, [`update_component_access`] should panic.
-/// - [`update_component_access`] may not add a `Without` filter for a component unless [`matches_component_set`] always returns `false` when the component set contains that component.
-/// - [`update_component_access`] may not add a `With` filter for a component unless [`matches_component_set`] always returns `false` when the component set doesn't contain that component.
+/// - [`update_component_access`] may not add a `With` or a `Without` filter for a component unless [`matches_component_set`] always returns `false` when the component set contains that component.
 /// - In cases where the query represents a disjunction (such as an `Or` filter) where each element is a valid [`WorldQuery`], the following rules must be obeyed:
 ///     - [`matches_component_set`] must be a disjunction of the element's implementations
 ///     - [`update_component_access`] must replace the filters with a disjunction of filters
@@ -63,8 +65,8 @@ pub unsafe trait WorldQuery {
     unsafe fn init_fetch<'w>(
         world: UnsafeWorldCell<'w>,
         state: &Self::State,
-        last_run: Tick,
-        this_run: Tick,
+        #[cfg(feature = "change_detection")] last_run: Tick,
+        #[cfg(feature = "change_detection")] this_run: Tick,
     ) -> Self::Fetch<'w>;
 
     /// Returns true if (and only if) every table of every archetype matched by this fetch contains
@@ -163,10 +165,20 @@ macro_rules! impl_tuple_world_query {
 
             #[inline]
             #[allow(clippy::unused_unit)]
-            unsafe fn init_fetch<'w>(_world: UnsafeWorldCell<'w>, state: &Self::State, _last_run: Tick, _this_run: Tick) -> Self::Fetch<'w> {
+            unsafe fn init_fetch<'w>(
+                _world: UnsafeWorldCell<'w>,
+                state: &Self::State,
+                #[cfg(feature = "change_detection")] last_run: Tick,
+                #[cfg(feature = "change_detection")] this_run: Tick,
+            ) -> Self::Fetch<'w> {
                 let ($($name,)*) = state;
                 // SAFETY: The invariants are uphold by the caller.
-                ($(unsafe { $name::init_fetch(_world, $name, _last_run, _this_run) },)*)
+                ($(unsafe { $name::init_fetch(
+                    _world,
+                    $name,
+                    #[cfg(feature = "change_detection")] last_run,
+                    #[cfg(feature = "change_detection")] this_run,
+                ) },)*)
             }
 
             const IS_DENSE: bool = true $(&& $name::IS_DENSE)*;

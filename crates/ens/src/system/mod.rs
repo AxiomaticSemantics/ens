@@ -112,6 +112,7 @@ mod query;
 mod system;
 mod system_name;
 mod system_param;
+#[cfg(feature = "system_registry")]
 mod system_registry;
 
 use std::{any::TypeId, borrow::Cow};
@@ -126,6 +127,7 @@ pub use query::*;
 pub use system::*;
 pub use system_name::*;
 pub use system_param::*;
+#[cfg(feature = "system_registry")]
 pub use system_registry::*;
 
 use crate::world::World;
@@ -338,6 +340,7 @@ mod tests {
 
     use crate::{
         self as ens,
+        access::{NonSendMut, Res, ResMut},
         archetype::{ArchetypeComponentId, Archetypes},
         bundle::Bundles,
         change_detection::DetectChanges,
@@ -351,8 +354,8 @@ mod tests {
             Schedule,
         },
         system::{
-            Commands, In, IntoSystem, Local, NonSend, NonSendMut, ParamSet, Query, Res, ResMut,
-            Resource, StaticSystemParam, System, SystemState,
+            Commands, In, IntoSystem, Local, NonSend, ParamSet, Query, Resource, StaticSystemParam,
+            System, SystemState,
         },
         world::{FromWorld, World},
     };

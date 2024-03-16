@@ -3,12 +3,14 @@
 use crate::{
     self as ens,
     archetype::ArchetypeFlags,
-    change_detection::MAX_CHANGE_AGE,
     entity::Entity,
     storage::{SparseSetIndex, Storages},
     system::{Local, Resource, SystemParam},
     world::{DeferredWorld, FromWorld, World},
 };
+
+#[cfg(feature = "change_detection")]
+use crate::change_detection::{Ticks, MAX_CHANGE_AGE};
 
 pub use ens_macros::Component;
 use ens_ptr::{OwningPtr, UnsafeCellDeref};
@@ -37,7 +39,7 @@ use std::{
 /// The following examples show how components are laid out in code.
 ///
 /// ```
-/// # use bevy_ecs::component::Component;
+/// # use ens::component::Component;
 /// # struct Color;
 /// #
 /// // A component can contain data...
@@ -83,7 +85,7 @@ use std::{
 /// This is achieved by adding an additional `#[component(storage = "SparseSet")]` attribute to the derive one:
 ///
 /// ```
-/// # use bevy_ecs::component::Component;
+/// # use ens::component::Component;
 /// #
 /// #[derive(Component)]
 /// #[component(storage = "SparseSet")]
@@ -102,8 +104,8 @@ use std::{
 /// The following example gives a demonstration of this pattern.
 ///
 /// ```
-/// // `Component` is defined in the `bevy_ecs` crate.
-/// use bevy_ecs::component::Component;
+/// // `Component` is defined in the `ens` crate.
+/// use ens::component::Component;
 ///
 /// // `Duration` is defined in the `std` crate.
 /// use std::time::Duration;
@@ -128,7 +130,7 @@ use std::{
 /// This will fail to compile since `RefCell` is `!Sync`.
 /// ```compile_fail
 /// # use std::cell::RefCell;
-/// # use bevy_ecs::component::Component;
+/// # use ens::component::Component;
 /// #[derive(Component)]
 /// struct NotSync {
 ///    counter: RefCell<usize>,
@@ -138,8 +140,8 @@ use std::{
 /// This will compile since the `RefCell` is wrapped with `SyncCell`.
 /// ```
 /// # use std::cell::RefCell;
-/// # use bevy_ecs::component::Component;
-/// use bevy_utils::synccell::SyncCell;
+/// # use ens::component::Component;
+/// use ens_utils::synccell::SyncCell;
 ///
 /// // This will compile.
 /// #[derive(Component)]
@@ -148,13 +150,14 @@ use std::{
 /// }
 /// ```
 ///
-/// [`SyncCell`]: bevy_utils::synccell::SyncCell
+/// [`SyncCell`]: ens_utils::synccell::SyncCell
 /// [`Exclusive`]: https://doc.rust-lang.org/nightly/std/sync/struct.Exclusive.html
 pub trait Component: Send + Sync + 'static {
     /// A constant indicating the storage type used for this component.
     const STORAGE_TYPE: StorageType;
 
     /// Called when registering this component, allowing mutable access to it's [`ComponentHooks`].
+    #[cfg(feature = "component_hooks")]
     fn register_component_hooks(_hooks: &mut ComponentHooks) {}
 }
 
@@ -164,7 +167,7 @@ pub trait Component: Send + Sync + 'static {
 /// The [`StorageType`] for a component is configured via the derive attribute
 ///
 /// ```
-/// # use bevy_ecs::{prelude::*, component::*};
+/// # use ens_ecs::{prelude::*, component::*};
 /// #[derive(Component)]
 /// #[component(storage = "SparseSet")]
 /// struct A;
@@ -180,9 +183,11 @@ pub enum StorageType {
 }
 
 /// The type used for [`Component`] lifecycle hooks such as `on_add`, `on_insert` or `on_remove`
+#[cfg(feature = "component_hooks")]
 pub type ComponentHook = for<'w> fn(DeferredWorld<'w>, Entity, ComponentId);
 
 /// Lifecycle hooks for a given [`Component`], stored in it's [`ComponentInfo`]
+#[cfg(feature = "component_hooks")]
 #[derive(Debug, Clone, Default)]
 pub struct ComponentHooks {
     pub(crate) on_add: Option<ComponentHook>,
@@ -190,6 +195,7 @@ pub struct ComponentHooks {
     pub(crate) on_remove: Option<ComponentHook>,
 }
 
+#[cfg(feature = "component_hooks")]
 impl ComponentHooks {
     /// Register a [`ComponentHook`] that will be run when this component is added to an entity.
     /// An `on_add` hook will always run before `on_insert` hooks. Spawning an entity counts as
@@ -256,6 +262,7 @@ impl ComponentHooks {
 pub struct ComponentInfo {
     id: ComponentId,
     descriptor: ComponentDescriptor,
+    #[cfg(feature = "component_hooks")]
     hooks: ComponentHooks,
 }
 
@@ -315,11 +322,13 @@ impl ComponentInfo {
         ComponentInfo {
             id,
             descriptor,
+            #[cfg(feature = "component_hooks")]
             hooks: ComponentHooks::default(),
         }
     }
 
     /// Update the given flags to include any [`ComponentHook`] registered to self
+    #[cfg(feature = "component_hooks")]
     #[inline]
     pub(crate) fn update_archetype_flags(&self, flags: &mut ArchetypeFlags) {
         if self.hooks().on_add.is_some() {
@@ -334,6 +343,7 @@ impl ComponentInfo {
     }
 
     /// Provides a reference to the collection of hooks associated with this [`Component`]
+    #[cfg(feature = "component_hooks")]
     pub fn hooks(&self) -> &ComponentHooks {
         &self.hooks
     }
@@ -361,11 +371,6 @@ impl ComponentInfo {
 /// from a `World` using [`World::component_id()`] or via [`Components::component_id()`]. Access
 /// to the `ComponentId` for a [`Resource`] is available via [`Components::resource_id()`].
 #[derive(Debug, Copy, Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
-#[cfg_attr(
-    feature = "bevy_reflect",
-    derive(Reflect),
-    reflect(Debug, Hash, PartialEq)
-)]
 pub struct ComponentId(usize);
 
 impl ComponentId {
@@ -551,7 +556,10 @@ impl Components {
                 storages,
                 ComponentDescriptor::new::<T>(),
             );
+
+            #[cfg(feature = "component_hooks")]
             T::register_component_hooks(&mut components[index.index()].hooks);
+
             index
         })
     }
@@ -629,6 +637,7 @@ impl Components {
         unsafe { self.components.get_unchecked(id.0) }
     }
 
+    #[cfg(feature = "component_hooks")]
     #[inline]
     pub(crate) fn get_hooks_mut(&mut self, id: ComponentId) -> Option<&mut ComponentHooks> {
         self.components.get_mut(id.0).map(|info| &mut info.hooks)
@@ -650,7 +659,7 @@ impl Components {
     /// yet been initialized using [`Components::init_component()`].
     ///
     /// ```
-    /// use bevy_ecs::prelude::*;
+    /// use ens::prelude::*;
     ///
     /// let mut world = World::new();
     ///
@@ -688,7 +697,7 @@ impl Components {
     /// yet been initialized using [`Components::init_resource()`].
     ///
     /// ```
-    /// use bevy_ecs::prelude::*;
+    /// use ens::prelude::*;
     ///
     /// let mut world = World::new();
     ///
@@ -763,14 +772,15 @@ impl Components {
     }
 }
 
+#[cfg(feature = "change_detection")]
 /// A value that tracks when a system ran relative to other systems.
 /// This is used to power change detection.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "bevy_reflect", derive(Reflect), reflect(Debug, PartialEq))]
 pub struct Tick {
     tick: u32,
 }
 
+#[cfg(feature = "change_detection")]
 impl Tick {
     /// The maximum relative age for a change tick.
     /// The value of this is equal to [`MAX_CHANGE_AGE`].
@@ -837,6 +847,7 @@ impl Tick {
     }
 }
 
+#[cfg(feature = "change_detection")]
 /// Interior-mutable access to the [`Tick`]s for a single component or resource.
 #[derive(Copy, Clone, Debug)]
 pub struct TickCells<'a> {
@@ -846,6 +857,7 @@ pub struct TickCells<'a> {
     pub changed: &'a UnsafeCell<Tick>,
 }
 
+#[cfg(feature = "change_detection")]
 impl<'a> TickCells<'a> {
     /// # Safety
     /// All cells contained within must uphold the safety invariants of [`UnsafeCellDeref::read`].
@@ -861,13 +873,14 @@ impl<'a> TickCells<'a> {
 }
 
 /// Records when a component or resource was added and when it was last mutably dereferenced (or added).
+#[cfg(feature = "change_detection")]
 #[derive(Copy, Clone, Debug)]
-#[cfg_attr(feature = "bevy_reflect", derive(Reflect), reflect(Debug))]
 pub struct ComponentTicks {
     pub(crate) added: Tick,
     pub(crate) changed: Tick,
 }
 
+#[cfg(feature = "change_detection")]
 impl ComponentTicks {
     /// Returns `true` if the component or resource was added after the system last ran.
     #[inline]
@@ -908,7 +921,7 @@ impl ComponentTicks {
     ///
     /// # Example
     /// ```no_run
-    /// # use bevy_ecs::{world::World, component::ComponentTicks};
+    /// # use ens::{world::World, component::ComponentTicks};
     /// let world: World = unimplemented!();
     /// let component_ticks: ComponentTicks = unimplemented!();
     ///
@@ -924,7 +937,7 @@ impl ComponentTicks {
 ///
 /// # Example
 /// ```
-/// # use bevy_ecs::{system::Local, component::{Component, ComponentId, ComponentIdFor}};
+/// # use ens::{system::Local, component::{Component, ComponentId, ComponentIdFor}};
 /// #[derive(Component)]
 /// struct Player;
 /// fn my_system(component_id: ComponentIdFor<Player>) {

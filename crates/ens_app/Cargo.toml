@@ -9,17 +9,20 @@ license = "MIT OR Apache-2.0"
 keywords = ["bevy"]
 
 [features]
-trace = []
+events = ["ens/events"]
+states = ["ens/states"]
+derive = ["ens_derive"]
+startup = []
 loop_wait = []
 sub_app = []
 default = []
 
 [dependencies]
 # bevy
-ens_derive = { path = "../ens_derive", version = "0.14.0-dev" }
-ens = { path = "../ens", version = "0.14.0-dev", default-features = false }
+ens = { path = "../ens", version = "0.14.0-dev" }
 ens_utils = { path = "../ens_utils", version = "0.14.0-dev" }
 ens_tasks = { path = "../ens_tasks", version = "0.14.0-dev" }
+ens_derive = { path = "../ens_derive", optional = true, version = "0.14.0-dev" }
 
 # other
 downcast-rs = "1.2.0"

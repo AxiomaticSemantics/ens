@@ -1,15 +1,19 @@
+#[cfg(feature = "parallel_scope")]
 mod parallel_scope;
 
 use super::{Deferred, Resource};
+#[cfg(feature = "system_registry")]
+use crate::system::{RunSystemWithInput, SystemId};
 use crate::{
     self as ens,
     bundle::Bundle,
     entity::{Entities, Entity},
-    system::{RunSystemWithInput, SystemId},
     world::{Command, CommandQueue, EntityWorldMut, FromWorld, World},
 };
 use ens_macros::SystemParam;
+
 use log::{error, info};
+#[cfg(feature = "parallel_scope")]
 pub use parallel_scope::*;
 use std::marker::PhantomData;
 
@@ -502,6 +506,7 @@ impl<'w, 's> Commands<'w, 's> {
     /// There is no way to get the output of a system when run as a command, because the
     /// execution of the system happens later. To get the output of a system, use
     /// [`World::run_system`] or [`World::run_system_with_input`] instead of running the system as a command.
+    #[cfg(feature = "system_registry")]
     pub fn run_system(&mut self, id: SystemId) {
         self.run_system_with_input(id, ());
     }
@@ -515,6 +520,7 @@ impl<'w, 's> Commands<'w, 's> {
     /// There is no way to get the output of a system when run as a command, because the
     /// execution of the system happens later. To get the output of a system, use
     /// [`World::run_system`] or [`World::run_system_with_input`] instead of running the system as a command.
+    #[cfg(feature = "system_registry")]
     pub fn run_system_with_input<I: 'static + Send>(&mut self, id: SystemId<I>, input: I) {
         self.queue
             .push(RunSystemWithInput::new_with_input(id, input));

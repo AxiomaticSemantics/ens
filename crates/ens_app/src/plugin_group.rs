@@ -65,8 +65,8 @@ impl PluginGroupBuilder {
 
     // Insert the new plugin as enabled, and removes its previous ordering if it was
     // already present
-    fn upsert_plugin_state<T: Plugin>(&mut self, plugin: T, added_at_index: usize) {
-        self.upsert_plugin_entry_state(
+    fn insert_plugin_state<T: Plugin>(&mut self, plugin: T, added_at_index: usize) {
+        self.insert_plugin_entry_state(
             TypeId::of::<T>(),
             PluginEntry {
                 plugin: Box::new(plugin),
@@ -78,7 +78,7 @@ impl PluginGroupBuilder {
 
     // Insert the new plugin entry as enabled, and removes its previous ordering if it was
     // already present
-    fn upsert_plugin_entry_state(
+    fn insert_plugin_entry_state(
         &mut self,
         key: TypeId,
         plugin: PluginEntry,
@@ -86,19 +86,10 @@ impl PluginGroupBuilder {
     ) {
         if let Some(entry) = self.plugins.insert(key, plugin) {
             if entry.enabled {
-                log::warn!(
+                panic!(
                     "You are replacing plugin '{}' that was not disabled.",
                     entry.plugin.name()
                 );
-            }
-            if let Some(to_remove) = self
-                .order
-                .iter()
-                .enumerate()
-                .find(|(i, ty)| *i != added_at_index && **ty == key)
-                .map(|(i, _)| i)
-            {
-                self.order.remove(to_remove);
             }
         }
     }
@@ -126,7 +117,7 @@ impl PluginGroupBuilder {
     pub fn add<T: Plugin>(mut self, plugin: T) -> Self {
         let target_index = self.order.len();
         self.order.push(TypeId::of::<T>());
-        self.upsert_plugin_state(plugin, target_index);
+        self.insert_plugin_state(plugin, target_index);
         self
     }
 
@@ -138,7 +129,7 @@ impl PluginGroupBuilder {
         } = group.build();
 
         for plugin_id in order {
-            self.upsert_plugin_entry_state(
+            self.insert_plugin_entry_state(
                 plugin_id,
                 plugins.remove(&plugin_id).unwrap(),
                 self.order.len(),
@@ -153,20 +144,20 @@ impl PluginGroupBuilder {
     /// Adds a [`Plugin`] in this [`PluginGroupBuilder`] before the plugin of type `Target`.
     /// If the plugin was already the group, it is removed from its previous place. There must
     /// be a plugin of type `Target` in the group or it will panic.
-    pub fn add_before<Target: Plugin, T: Plugin>(mut self, plugin: T) -> Self {
+    pub fn before<Target: Plugin, T: Plugin>(mut self, plugin: T) -> Self {
         let target_index = self.index_of::<Target>();
         self.order.insert(target_index, TypeId::of::<T>());
-        self.upsert_plugin_state(plugin, target_index);
+        self.insert_plugin_state(plugin, target_index);
         self
     }
 
     /// Adds a [`Plugin`] in this [`PluginGroupBuilder`] after the plugin of type `Target`.
     /// If the plugin was already the group, it is removed from its previous place. There must
     /// be a plugin of type `Target` in the group or it will panic.
-    pub fn add_after<Target: Plugin, T: Plugin>(mut self, plugin: T) -> Self {
+    pub fn after<Target: Plugin, T: Plugin>(mut self, plugin: T) -> Self {
         let target_index = self.index_of::<Target>() + 1;
         self.order.insert(target_index, TypeId::of::<T>());
-        self.upsert_plugin_state(plugin, target_index);
+        self.insert_plugin_state(plugin, target_index);
         self
     }
 
@@ -209,7 +200,6 @@ impl PluginGroupBuilder {
         for ty in &self.order {
             if let Some(entry) = self.plugins.remove(ty) {
                 if entry.enabled {
-                    log::debug!("added plugin: {}", entry.plugin.name());
                     if let Err(AppError::DuplicatePlugin { plugin_name }) =
                         app.add_boxed_plugin(entry.plugin)
                     {

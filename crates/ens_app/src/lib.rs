@@ -10,22 +10,28 @@ mod schedule_runner;
 mod task_pool_plugin;
 
 pub use app::*;
-pub use ens_derive::DynamicPlugin;
 pub use main_schedule::*;
 pub use plugin::*;
 pub use plugin_group::*;
 pub use schedule_runner::*;
 pub use task_pool_plugin::*;
 
+#[cfg(feature = "derive")]
+pub use ens_derive::DynamicPlugin;
+
 #[allow(missing_docs)]
 pub mod prelude {
     #[doc(hidden)]
     pub use crate::{
         app::App,
-        main_schedule::{
-            Main, PostStartup, PostUpdate, PreStartup, PreUpdate, Startup, StateTransition, Update,
-        },
+        main_schedule::{Main, PostUpdate, PreUpdate, Update},
         task_pool_plugin::TaskPoolPlugin,
-        DynamicPlugin, Plugin, PluginGroup,
+        Plugin, PluginGroup,
     };
+
+    #[cfg(feature = "startup")]
+    pub use crate::main_schedule::{PostStartup, PreStartup, Startup};
+
+    #[cfg(feature = "states")]
+    pub use crate::main_echedule::StateTransition;
 }

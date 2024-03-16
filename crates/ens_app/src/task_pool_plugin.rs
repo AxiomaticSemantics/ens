@@ -1,4 +1,4 @@
-use crate::{App, Plugin, PostUpdate};
+use crate::{App, Plugin, PostUpdate, PreUpdate, Update};
 use ens::system::NonSend;
 use ens_tasks::{tick_global_task_pools_on_main_thread, TaskPoolOptions};
 
@@ -18,6 +18,8 @@ impl Plugin for TaskPoolPlugin {
         self.task_pool_options.create_default_pools();
 
         app.add_systems(PostUpdate, tick_global_task_pools);
+        app.add_systems(Update, tick_global_task_pools);
+        app.add_systems(PreUpdate, tick_global_task_pools);
     }
 }
 /// A dummy type that is [`!Send`](Send), to force systems to run on the main thread.

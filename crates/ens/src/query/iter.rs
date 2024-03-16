@@ -1,11 +1,14 @@
 use crate::{
     archetype::{Archetype, ArchetypeEntity, ArchetypeId, Archetypes},
-    component::Tick,
     entity::{Entities, Entity},
     query::{ArchetypeFilter, DebugCheckedUnwrap, QueryState},
     storage::{Table, TableId, TableRow, Tables},
     world::unsafe_world_cell::UnsafeWorldCell,
 };
+
+#[cfg(feature = "change_detection")]
+use crate::component::Tick;
+
 use std::{borrow::Borrow, iter::FusedIterator, mem::MaybeUninit, ops::Range};
 
 use super::{QueryData, QueryFilter, ReadOnlyQueryData};
@@ -28,8 +31,8 @@ impl<'w, 's, D: QueryData, F: QueryFilter> QueryIter<'w, 's, D, F> {
     pub(crate) unsafe fn new(
         world: UnsafeWorldCell<'w>,
         query_state: &'s QueryState<D, F>,
-        last_run: Tick,
-        this_run: Tick,
+        #[cfg(feature = "change_detection")] last_run: Tick,
+        #[cfg(feature = "change_detection")] this_run: Tick,
     ) -> Self {
         QueryIter {
             query_state,
@@ -37,7 +40,16 @@ impl<'w, 's, D: QueryData, F: QueryFilter> QueryIter<'w, 's, D, F> {
             tables: unsafe { &world.storages().tables },
             archetypes: world.archetypes(),
             // SAFETY: The invariants are uphold by the caller.
-            cursor: unsafe { QueryIterationCursor::init(world, query_state, last_run, this_run) },
+            cursor: unsafe {
+                QueryIterationCursor::init(
+                    world,
+                    query_state,
+                    #[cfg(feature = "change_detection")]
+                    last_run,
+                    #[cfg(feature = "change_detection")]
+                    this_run,
+                )
+            },
         }
     }
 
@@ -300,11 +312,25 @@ where
         world: UnsafeWorldCell<'w>,
         query_state: &'s QueryState<D, F>,
         entity_list: EntityList,
-        last_run: Tick,
-        this_run: Tick,
+        #[cfg(feature = "change_detection")] last_run: Tick,
+        #[cfg(feature = "change_detection")] this_run: Tick,
     ) -> QueryManyIter<'w, 's, D, F, I> {
-        let fetch = D::init_fetch(world, &query_state.fetch_state, last_run, this_run);
-        let filter = F::init_fetch(world, &query_state.filter_state, last_run, this_run);
+        let fetch = D::init_fetch(
+            world,
+            &query_state.fetch_state,
+            #[cfg(feature = "change_detection")]
+            last_run,
+            #[cfg(feature = "change_detection")]
+            this_run,
+        );
+        let filter = F::init_fetch(
+            world,
+            &query_state.filter_state,
+            #[cfg(feature = "change_detection")]
+            last_run,
+            #[cfg(feature = "change_detection")]
+            this_run,
+        );
         QueryManyIter {
             query_state,
             entities: world.entities(),
@@ -493,8 +519,8 @@ impl<'w, 's, D: QueryData, F: QueryFilter, const K: usize> QueryCombinationIter<
     pub(crate) unsafe fn new(
         world: UnsafeWorldCell<'w>,
         query_state: &'s QueryState<D, F>,
-        last_run: Tick,
-        this_run: Tick,
+        #[cfg(feature = "change_detection")] last_run: Tick,
+        #[cfg(feature = "change_detection")] this_run: Tick,
     ) -> Self {
         // Initialize array with cursors.
         // There is no FromIterator on arrays, so instead initialize it manually with MaybeUninit
@@ -507,7 +533,9 @@ impl<'w, 's, D: QueryData, F: QueryFilter, const K: usize> QueryCombinationIter<
             ptr.write(QueryIterationCursor::init(
                 world,
                 query_state,
+                #[cfg(feature = "change_detection")]
                 last_run,
+                #[cfg(feature = "change_detection")]
                 this_run,
             ));
         }
@@ -515,7 +543,9 @@ impl<'w, 's, D: QueryData, F: QueryFilter, const K: usize> QueryCombinationIter<
             slot.write(QueryIterationCursor::init_empty(
                 world,
                 query_state,
+                #[cfg(feature = "change_detection")]
                 last_run,
+                #[cfg(feature = "change_detection")]
                 this_run,
             ));
         }
@@ -683,13 +713,20 @@ impl<'w, 's, D: QueryData, F: QueryFilter> QueryIterationCursor<'w, 's, D, F> {
     unsafe fn init_empty(
         world: UnsafeWorldCell<'w>,
         query_state: &'s QueryState<D, F>,
-        last_run: Tick,
-        this_run: Tick,
+        #[cfg(feature = "change_detection")] last_run: Tick,
+        #[cfg(feature = "change_detection")] this_run: Tick,
     ) -> Self {
         QueryIterationCursor {
             table_id_iter: [].iter(),
             archetype_id_iter: [].iter(),
-            ..Self::init(world, query_state, last_run, this_run)
+            ..Self::init(
+                world,
+                query_state,
+                #[cfg(feature = "change_detection")]
+                last_run,
+                #[cfg(feature = "change_detection")]
+                this_run,
+            )
         }
     }
 
@@ -699,11 +736,25 @@ impl<'w, 's, D: QueryData, F: QueryFilter> QueryIterationCursor<'w, 's, D, F> {
     unsafe fn init(
         world: UnsafeWorldCell<'w>,
         query_state: &'s QueryState<D, F>,
-        last_run: Tick,
-        this_run: Tick,
+        #[cfg(feature = "change_detection")] last_run: Tick,
+        #[cfg(feature = "change_detection")] this_run: Tick,
     ) -> Self {
-        let fetch = D::init_fetch(world, &query_state.fetch_state, last_run, this_run);
-        let filter = F::init_fetch(world, &query_state.filter_state, last_run, this_run);
+        let fetch = D::init_fetch(
+            world,
+            &query_state.fetch_state,
+            #[cfg(feature = "change_detection")]
+            last_run,
+            #[cfg(feature = "change_detection")]
+            this_run,
+        );
+        let filter = F::init_fetch(
+            world,
+            &query_state.filter_state,
+            #[cfg(feature = "change_detection")]
+            last_run,
+            #[cfg(feature = "change_detection")]
+            this_run,
+        );
         QueryIterationCursor {
             fetch,
             filter,

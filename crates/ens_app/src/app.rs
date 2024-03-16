@@ -1,30 +1,27 @@
-use crate::{Main, MainSchedulePlugin, Plugin, Plugins, PreUpdate, StateTransition};
+use crate::{Main, MainSchedulePlugin, Plugin, Plugins};
 
+#[cfg(feature = "events")]
+use crate::PreUpdate;
+
+#[cfg(feature = "states")]
+use crate::StateTransition;
+
+#[cfg(feature = "sub_app")]
+use ens::schedule::{common_conditions::run_once as run_once_condition, run_enter_schedule};
 use ens::{
     prelude::*,
-    schedule::{
-        common_conditions::run_once as run_once_condition, run_enter_schedule,
-        InternedScheduleLabel, ScheduleBuildSettings, ScheduleLabel,
-    },
+    schedule::{InternedScheduleLabel, ScheduleBuildSettings, ScheduleLabel},
 };
+
+#[cfg(feature = "derive")]
 pub use ens_derive::AppLabel;
-pub use ens_utils::label::DynEq;
-use ens_utils::{intern::Interned, HashMap, HashSet};
+use ens_utils::{intern::Interned, label::DynEq, HashMap, HashSet};
 
 use std::{
     fmt::Debug,
     panic::{catch_unwind, resume_unwind, AssertUnwindSafe},
 };
 use thiserror::Error;
-
-ens_utils::define_label!(
-    /// A strongly-typed class of labels used to identify an [`App`].
-    AppLabel,
-    APP_LABEL_INTERNER
-);
-
-/// A shorthand for `Interned<dyn AppLabel>`.
-pub type InternedAppLabel = Interned<dyn AppLabel>;
 
 #[derive(Debug, Error)]
 pub(crate) enum AppError {
@@ -42,7 +39,7 @@ pub(crate) enum AppError {
 ///
 /// # Examples
 ///
-/// Here is a simple "Hello World" Bevy app:
+/// Here is a simple "Hello World" Ens app:
 ///
 /// ```
 /// # use ens_app::prelude::*;
@@ -256,6 +253,7 @@ impl App {
     /// # Panics
     ///
     /// The active schedule of the app must be set before this method is called.
+    #[inline(always)]
     pub fn update(&mut self) {
         self.world.run_schedule(self.main_schedule_label);
 
@@ -267,7 +265,7 @@ impl App {
             sub_app.run();
         }
 
-        self.world.clear_trackers();
+        //self.world.clear_trackers();
     }
 
     /// Starts the application by calling the app's [runner function](Self::set_runner).
@@ -611,9 +609,6 @@ impl App {
     /// presence of a main loop in the app is desired, it is the responsibility of the runner
     /// function to provide it.
     ///
-    /// The runner function is usually not set manually, but by Bevy integrated plugins
-    /// (e.g. `WinitPlugin`).
-    ///
     /// # Examples
     ///
     /// ```
@@ -703,7 +698,7 @@ impl App {
 
     /// Adds one or more [`Plugin`]s.
     ///
-    /// One of Bevy's core principles is modularity. All Bevy engine features are implemented
+    /// One of Ens's core principles is modularity. All Ens features are implemented
     /// as [`Plugin`]s. This includes internal features like the renderer.
     ///
     /// [`Plugin`]s can be grouped into a set by using a [`PluginGroup`].
@@ -1016,8 +1011,6 @@ pub struct AppExit;
 
 #[cfg(test)]
 mod tests {
-    use crate as ens_app;
-
     use std::marker::PhantomData;
 
     use ens::{
@@ -1115,109 +1108,6 @@ mod tests {
 
         app.world.run_schedule(OnEnter(AppState::MainMenu));
         assert_eq!(app.world.entities().len(), 2);
-    }
-
-    #[test]
-    fn test_derive_app_label() {
-        use super::AppLabel;
-        use crate::app;
-
-        #[derive(AppLabel, Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-        struct UnitLabel;
-
-        #[derive(AppLabel, Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-        struct TupleLabel(u32, u32);
-
-        #[derive(AppLabel, Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-        struct StructLabel {
-            a: u32,
-            b: u32,
-        }
-
-        #[derive(AppLabel, Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-        struct EmptyTupleLabel();
-
-        #[derive(AppLabel, Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-        struct EmptyStructLabel {}
-
-        #[derive(AppLabel, Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-        enum EnumLabel {
-            #[default]
-            Unit,
-            Tuple(u32, u32),
-            Struct {
-                a: u32,
-                b: u32,
-            },
-        }
-
-        #[derive(AppLabel, Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-        struct GenericLabel<T>(PhantomData<T>);
-
-        assert_eq!(UnitLabel.intern(), UnitLabel.intern());
-        assert_eq!(EnumLabel::Unit.intern(), EnumLabel::Unit.intern());
-        assert_ne!(UnitLabel.intern(), EnumLabel::Unit.intern());
-        assert_ne!(UnitLabel.intern(), TupleLabel(0, 0).intern());
-        assert_ne!(EnumLabel::Unit.intern(), EnumLabel::Tuple(0, 0).intern());
-
-        assert_eq!(TupleLabel(0, 0).intern(), TupleLabel(0, 0).intern());
-        assert_eq!(
-            EnumLabel::Tuple(0, 0).intern(),
-            EnumLabel::Tuple(0, 0).intern()
-        );
-        assert_ne!(TupleLabel(0, 0).intern(), TupleLabel(0, 1).intern());
-        assert_ne!(
-            EnumLabel::Tuple(0, 0).intern(),
-            EnumLabel::Tuple(0, 1).intern()
-        );
-        assert_ne!(TupleLabel(0, 0).intern(), EnumLabel::Tuple(0, 0).intern());
-        assert_ne!(
-            TupleLabel(0, 0).intern(),
-            StructLabel { a: 0, b: 0 }.intern()
-        );
-        assert_ne!(
-            EnumLabel::Tuple(0, 0).intern(),
-            EnumLabel::Struct { a: 0, b: 0 }.intern()
-        );
-
-        assert_eq!(
-            StructLabel { a: 0, b: 0 }.intern(),
-            StructLabel { a: 0, b: 0 }.intern()
-        );
-        assert_eq!(
-            EnumLabel::Struct { a: 0, b: 0 }.intern(),
-            EnumLabel::Struct { a: 0, b: 0 }.intern()
-        );
-        assert_ne!(
-            StructLabel { a: 0, b: 0 }.intern(),
-            StructLabel { a: 0, b: 1 }.intern()
-        );
-        assert_ne!(
-            EnumLabel::Struct { a: 0, b: 0 }.intern(),
-            EnumLabel::Struct { a: 0, b: 1 }.intern()
-        );
-        assert_ne!(
-            StructLabel { a: 0, b: 0 }.intern(),
-            EnumLabel::Struct { a: 0, b: 0 }.intern()
-        );
-        assert_ne!(
-            StructLabel { a: 0, b: 0 }.intern(),
-            EnumLabel::Struct { a: 0, b: 0 }.intern()
-        );
-        assert_ne!(StructLabel { a: 0, b: 0 }.intern(), UnitLabel.intern(),);
-        assert_ne!(
-            EnumLabel::Struct { a: 0, b: 0 }.intern(),
-            EnumLabel::Unit.intern()
-        );
-
-        assert_eq!(
-            GenericLabel::<u32>(PhantomData).intern(),
-            GenericLabel::<u32>(PhantomData).intern()
-        );
-        assert_ne!(
-            GenericLabel::<u32>(PhantomData).intern(),
-            GenericLabel::<u64>(PhantomData).intern()
-        );
     }
 
     /// Custom runners should be in charge of when `app::update` gets called as they may need to

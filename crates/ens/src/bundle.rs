@@ -10,13 +10,15 @@ use crate::{
         AddBundle, Archetype, ArchetypeId, Archetypes, BundleComponentStatus, ComponentStatus,
         SpawnBundleStatus,
     },
-    component::{Component, ComponentId, Components, StorageType, Tick},
+    component::{Component, ComponentId, Components, StorageType},
     entity::{Entities, Entity, EntityLocation},
-    prelude::World,
     query::DebugCheckedUnwrap,
     storage::{SparseSetIndex, SparseSets, Storages, Table, TableRow},
-    world::unsafe_world_cell::UnsafeWorldCell,
+    world::{unsafe_world_cell::UnsafeWorldCell, World},
 };
+
+#[cfg(feature = "change_detection")]
+use crate::component::Tick;
 
 use ens_ptr::{ConstNonNull, OwningPtr};
 use ens_utils::all_tuples;
@@ -45,7 +47,7 @@ use std::ptr::NonNull;
 /// Importantly, bundles are only their constituent set of components.
 /// You **should not** use bundles as a unit of behavior.
 /// The behavior of your app can only be considered in terms of components, as systems,
-/// which drive the behavior of a `bevy` application, operate on combinations of
+/// which drive the behavior of an `ens` application, operate on combinations of
 /// components.
 ///
 /// This rule is also important because multiple bundles may contain the same component type,
@@ -97,7 +99,7 @@ use std::ptr::NonNull;
 /// If you want to add `PhantomData` to your `Bundle` you have to mark it with `#[bundle(ignore)]`.
 /// ```
 /// # use std::marker::PhantomData;
-/// use bevy_ecs::{component::Component, bundle::Bundle};
+/// use ens::{component::Component, bundle::Bundle};
 ///
 /// #[derive(Component)]
 /// struct XPosition(i32);
@@ -382,7 +384,7 @@ impl BundleInfo {
         bundle_component_status: &S,
         entity: Entity,
         table_row: TableRow,
-        change_tick: Tick,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
         bundle: T,
     ) {
         // NOTE: get_components calls this closure on each component in "bundle order".
@@ -400,10 +402,20 @@ impl BundleInfo {
                     let status = unsafe { bundle_component_status.get_status(bundle_component) };
                     match status {
                         ComponentStatus::Added => {
-                            column.initialize(table_row, component_ptr, change_tick);
+                            column.initialize(
+                                table_row,
+                                component_ptr,
+                                #[cfg(feature = "change_detection")]
+                                change_tick,
+                            );
                         }
                         ComponentStatus::Mutated => {
-                            column.replace(table_row, component_ptr, change_tick);
+                            column.replace(
+                                table_row,
+                                component_ptr,
+                                #[cfg(feature = "change_detection")]
+                                change_tick,
+                            );
                         }
                     }
                 }
@@ -412,7 +424,12 @@ impl BundleInfo {
                         // SAFETY: If component_id is in self.component_ids, BundleInfo::new requires that
                         // a sparse set exists for the component.
                         unsafe { sparse_sets.get_mut(component_id).debug_checked_unwrap() };
-                    sparse_set.insert(entity, component_ptr, change_tick);
+                    sparse_set.insert(
+                        entity,
+                        component_ptr,
+                        #[cfg(feature = "change_detection")]
+                        change_tick,
+                    );
                 }
             }
             bundle_component += 1;
@@ -518,6 +535,7 @@ pub(crate) struct BundleInserter<'w> {
     table: NonNull<Table>,
     archetype: NonNull<Archetype>,
     result: InsertBundleResult,
+    #[cfg(feature = "change_detection")]
     change_tick: Tick,
 }
 
@@ -537,13 +555,21 @@ impl<'w> BundleInserter<'w> {
     pub(crate) fn new<T: Bundle>(
         world: &'w mut World,
         archetype_id: ArchetypeId,
-        change_tick: Tick,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
     ) -> Self {
         let bundle_id = world
             .bundles
             .init_info::<T>(&mut world.components, &mut world.storages);
         // SAFETY: We just ensured this bundle exists
-        unsafe { Self::new_with_id(world, archetype_id, bundle_id, change_tick) }
+        unsafe {
+            Self::new_with_id(
+                world,
+                archetype_id,
+                bundle_id,
+                #[cfg(feature = "change_detection")]
+                change_tick,
+            )
+        }
     }
 
     /// Creates a new [`BundleInserter`].
@@ -555,7 +581,7 @@ impl<'w> BundleInserter<'w> {
         world: &'w mut World,
         archetype_id: ArchetypeId,
         bundle_id: BundleId,
-        change_tick: Tick,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
     ) -> Self {
         // SAFETY: We will not make any accesses to the command queue, component or resource data of this world
         let bundle_info = world.bundles.get_unchecked(bundle_id);
@@ -583,6 +609,7 @@ impl<'w> BundleInserter<'w> {
                 bundle_info: bundle_info.into(),
                 table: table.into(),
                 result: InsertBundleResult::SameArchetype,
+                #[cfg(feature = "change_detection")]
                 change_tick,
                 world: world.as_unsafe_world_cell(),
             }
@@ -608,6 +635,7 @@ impl<'w> BundleInserter<'w> {
                     result: InsertBundleResult::NewArchetypeSameTable {
                         new_archetype: new_archetype.into(),
                     },
+                    #[cfg(feature = "change_detection")]
                     change_tick,
                     world: world.as_unsafe_world_cell(),
                 }
@@ -622,6 +650,7 @@ impl<'w> BundleInserter<'w> {
                         new_archetype: new_archetype.into(),
                         new_table: new_table.into(),
                     },
+                    #[cfg(feature = "change_detection")]
                     change_tick,
                     world: world.as_unsafe_world_cell(),
                 }
@@ -658,6 +687,7 @@ impl<'w> BundleInserter<'w> {
                     add_bundle,
                     entity,
                     location.table_row,
+                    #[cfg(feature = "change_detection")]
                     self.change_tick,
                     bundle,
                 );
@@ -696,6 +726,7 @@ impl<'w> BundleInserter<'w> {
                     add_bundle,
                     entity,
                     result.table_row,
+                    #[cfg(feature = "change_detection")]
                     self.change_tick,
                     bundle,
                 );
@@ -775,6 +806,7 @@ impl<'w> BundleInserter<'w> {
                     add_bundle,
                     entity,
                     move_result.new_row,
+                    #[cfg(feature = "change_detection")]
                     self.change_tick,
                     bundle,
                 );
@@ -784,26 +816,29 @@ impl<'w> BundleInserter<'w> {
         };
 
         // SAFETY: We have no outstanding mutable references to world as they were dropped
-        let mut deferred_world = unsafe { self.world.into_deferred() };
+        #[cfg(feature = "component_hooks")]
+        {
+            let mut deferred_world = unsafe { self.world.into_deferred() };
 
-        if new_archetype.has_on_add() {
-            // SAFETY: All components in the bundle are guaranteed to exist in the World
-            // as they must be initialized before creating the BundleInfo.
-            unsafe {
-                deferred_world.trigger_on_add(
-                    entity,
-                    bundle_info
-                        .iter_components()
-                        .zip(add_bundle.bundle_status.iter())
-                        .filter(|(_, &status)| status == ComponentStatus::Added)
-                        .map(|(id, _)| id),
-                );
+            if new_archetype.has_on_add() {
+                // SAFETY: All components in the bundle are guaranteed to exist in the World
+                // as they must be initialized before creating the BundleInfo.
+                unsafe {
+                    deferred_world.trigger_on_add(
+                        entity,
+                        bundle_info
+                            .iter_components()
+                            .zip(add_bundle.bundle_status.iter())
+                            .filter(|(_, &status)| status == ComponentStatus::Added)
+                            .map(|(id, _)| id),
+                    );
+                }
             }
-        }
-        if new_archetype.has_on_insert() {
-            // SAFETY: All components in the bundle are guaranteed to exist in the World
-            // as they must be initialized before creating the BundleInfo.
-            unsafe { deferred_world.trigger_on_insert(entity, bundle_info.iter_components()) }
+            if new_archetype.has_on_insert() {
+                // SAFETY: All components in the bundle are guaranteed to exist in the World
+                // as they must be initialized before creating the BundleInfo.
+                unsafe { deferred_world.trigger_on_insert(entity, bundle_info.iter_components()) }
+            }
         }
 
         new_location
@@ -822,17 +857,28 @@ pub(crate) struct BundleSpawner<'w> {
     bundle_info: ConstNonNull<BundleInfo>,
     table: NonNull<Table>,
     archetype: NonNull<Archetype>,
+    #[cfg(feature = "change_detection")]
     change_tick: Tick,
 }
 
 impl<'w> BundleSpawner<'w> {
     #[inline]
-    pub fn new<T: Bundle>(world: &'w mut World, change_tick: Tick) -> Self {
+    pub fn new<T: Bundle>(
+        world: &'w mut World,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
+    ) -> Self {
         let bundle_id = world
             .bundles
             .init_info::<T>(&mut world.components, &mut world.storages);
         // SAFETY: we initialized this bundle_id in `init_info`
-        unsafe { Self::new_with_id(world, bundle_id, change_tick) }
+        unsafe {
+            Self::new_with_id(
+                world,
+                bundle_id,
+                #[cfg(feature = "change_detection")]
+                change_tick,
+            )
+        }
     }
 
     /// Creates a new [`BundleSpawner`].
@@ -843,7 +889,7 @@ impl<'w> BundleSpawner<'w> {
     pub(crate) unsafe fn new_with_id(
         world: &'w mut World,
         bundle_id: BundleId,
-        change_tick: Tick,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
     ) -> Self {
         let bundle_info = world.bundles.get_unchecked(bundle_id);
         let new_archetype_id = bundle_info.add_bundle_to_archetype(
@@ -858,8 +904,9 @@ impl<'w> BundleSpawner<'w> {
             bundle_info: bundle_info.into(),
             table: table.into(),
             archetype: archetype.into(),
-            change_tick,
             world: world.as_unsafe_world_cell(),
+            #[cfg(feature = "change_detection")]
+            change_tick,
         }
     }
 
@@ -898,6 +945,7 @@ impl<'w> BundleSpawner<'w> {
                 &SpawnBundleStatus,
                 entity,
                 table_row,
+                #[cfg(feature = "change_detection")]
                 self.change_tick,
                 bundle,
             );
@@ -906,16 +954,19 @@ impl<'w> BundleSpawner<'w> {
         };
 
         // SAFETY: We have no outstanding mutable references to world as they were dropped
-        let mut deferred_world = unsafe { self.world.into_deferred() };
-        if archetype.has_on_add() {
-            // SAFETY: All components in the bundle are guaranteed to exist in the World
-            // as they must be initialized before creating the BundleInfo.
-            unsafe { deferred_world.trigger_on_add(entity, bundle_info.iter_components()) };
-        }
-        if archetype.has_on_insert() {
-            // SAFETY: All components in the bundle are guaranteed to exist in the World
-            // as they must be initialized before creating the BundleInfo.
-            unsafe { deferred_world.trigger_on_insert(entity, bundle_info.iter_components()) };
+        #[cfg(feature = "component_hooks")]
+        {
+            let mut deferred_world = unsafe { self.world.into_deferred() };
+            if archetype.has_on_add() {
+                // SAFETY: All components in the bundle are guaranteed to exist in the World
+                // as they must be initialized before creating the BundleInfo.
+                unsafe { deferred_world.trigger_on_add(entity, bundle_info.iter_components()) };
+            }
+            if archetype.has_on_insert() {
+                // SAFETY: All components in the bundle are guaranteed to exist in the World
+                // as they must be initialized before creating the BundleInfo.
+                unsafe { deferred_world.trigger_on_insert(entity, bundle_info.iter_components()) };
+            }
         }
 
         location

@@ -1,18 +1,23 @@
+#[cfg(feature = "multi-threaded")]
 mod multi_threaded;
+#[cfg(feature = "simple")]
 mod simple;
+#[cfg(feature = "single-threaded")]
 mod single_threaded;
 
+#[cfg(feature = "multi-threaded")]
 pub use self::multi_threaded::{MainThreadExecutor, MultiThreadedExecutor};
+#[cfg(feature = "simple")]
 pub use self::simple::SimpleExecutor;
+#[cfg(feature = "single-threaded")]
 pub use self::single_threaded::SingleThreadedExecutor;
 
 use fixedbitset::FixedBitSet;
 
-use crate::{
-    schedule::{BoxedCondition, NodeId},
-    system::BoxedSystem,
-    world::World,
-};
+use crate::{schedule::NodeId, system::BoxedSystem, world::World};
+
+#[cfg(feature = "run_conditions")]
+use crate::schedule::BoxedCondition;
 
 /// Types that can run a [`SystemSchedule`] on a [`World`].
 pub(super) trait SystemExecutor: Send + Sync {
@@ -34,12 +39,15 @@ pub enum ExecutorKind {
     /// Useful if you're dealing with a single-threaded environment, saving your threads for
     /// other things, or just trying minimize overhead.
     #[cfg_attr(not(feature = "multi-threaded"), default)]
+    #[cfg(feature = "single-threaded")]
     SingleThreaded,
     /// Like [`SingleThreaded`](ExecutorKind::SingleThreaded) but calls [`apply_deferred`](crate::system::System::apply_deferred)
     /// immediately after running each system.
+    #[cfg(feature = "simple")]
     Simple,
     /// Runs the schedule using a thread pool. Non-conflicting systems can run in parallel.
     #[cfg_attr(feature = "multi-threaded", default)]
+    #[cfg(feature = "multi-threaded")]
     MultiThreaded,
 }
 
@@ -55,18 +63,22 @@ pub struct SystemSchedule {
     /// Indexed by system node id.
     pub(super) systems: Vec<BoxedSystem>,
     /// Indexed by system node id.
+    #[cfg(feature = "run_conditions")]
     pub(super) system_conditions: Vec<Vec<BoxedCondition>>,
     /// Indexed by system node id.
     pub(super) system_dependencies: Vec<usize>,
     /// Indexed by system node id.
     pub(super) system_dependents: Vec<Vec<usize>>,
     /// Indexed by system node id.
+    #[cfg(feature = "run_conditions")]
     pub(super) sets_with_conditions_of_systems: Vec<FixedBitSet>,
     /// List of system set node ids.
     pub(super) set_ids: Vec<NodeId>,
     /// Indexed by system set node id.
+    #[cfg(feature = "run_conditions")]
     pub(super) set_conditions: Vec<Vec<BoxedCondition>>,
     /// Indexed by system set node id.
+    #[cfg(feature = "run_conditions")]
     pub(super) systems_in_sets_with_conditions: Vec<FixedBitSet>,
 }
 
@@ -75,13 +87,17 @@ impl SystemSchedule {
     pub const fn new() -> Self {
         Self {
             systems: Vec::new(),
+            #[cfg(feature = "run_conditions")]
             system_conditions: Vec::new(),
+            #[cfg(feature = "run_conditions")]
             set_conditions: Vec::new(),
             system_ids: Vec::new(),
             set_ids: Vec::new(),
             system_dependencies: Vec::new(),
             system_dependents: Vec::new(),
+            #[cfg(feature = "run_conditions")]
             sets_with_conditions_of_systems: Vec::new(),
+            #[cfg(feature = "run_conditions")]
             systems_in_sets_with_conditions: Vec::new(),
         }
     }

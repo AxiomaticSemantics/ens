@@ -1,9 +1,8 @@
-pub use crate::change_detection::{NonSendMut, Res, ResMut};
 use crate::{
+    access::{NonSendMut, Res, ResMut},
     archetype::{Archetype, Archetypes},
     bundle::Bundles,
-    change_detection::{Ticks, TicksMut},
-    component::{ComponentId, ComponentTicks, Components, Tick},
+    component::{ComponentId, Components},
     entity::Entities,
     query::{
         Access, FilteredAccess, FilteredAccessSet, QueryData, QueryFilter, QueryState,
@@ -12,6 +11,11 @@ use crate::{
     system::{Query, SystemMeta},
     world::{unsafe_world_cell::UnsafeWorldCell, FromWorld, World},
 };
+
+#[cfg(feature = "change_detection")]
+use crate::change_detection::{Ticks, TicksMut};
+#[cfg(feature = "change_detection")]
+use crate::component::{ComponentTicks, Tick};
 
 use ens_macros::impl_param_set;
 pub use ens_macros::Resource;
@@ -169,7 +173,7 @@ pub unsafe trait SystemParam: Sized {
         state: &'state mut Self::State,
         system_meta: &SystemMeta,
         world: UnsafeWorldCell<'world>,
-        change_tick: Tick,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
     ) -> Self::Item<'world, 'state>;
 }
 
@@ -225,12 +229,21 @@ unsafe impl<D: QueryData + 'static, F: QueryFilter + 'static> SystemParam for Qu
         state: &'s mut Self::State,
         system_meta: &SystemMeta,
         world: UnsafeWorldCell<'w>,
-        change_tick: Tick,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
     ) -> Self::Item<'w, 's> {
         // SAFETY: We have registered all of the query's world accesses,
         // so the caller ensures that `world` has permission to access any
         // world data that the query needs.
-        unsafe { Query::new(world, state, system_meta.last_run, change_tick) }
+        unsafe {
+            Query::new(
+                world,
+                state,
+                #[cfg(feature = "change_detection")]
+                system_meta.last_run,
+                #[cfg(feature = "change_detection")]
+                change_tick,
+            )
+        }
     }
 }
 
@@ -251,7 +264,7 @@ fn assert_component_access_compatibility(
         .map(|component_id| world.components.get_info(component_id).unwrap().name())
         .collect::<Vec<&str>>();
     let accesses = conflicting_components.join(", ");
-    panic!("error[B0001]: Query<{query_type}, {filter_type}> in system {system_name} accesses component(s) {accesses} in a conflicting manner. See: https://bevyengine.org/learn/errors/#b0001");
+    panic!("error[B0001]: Query<{query_type}, {filter_type}> in system {system_name} accesses component(s) {accesses} in a conflicting manner.");
 }
 
 /// A collection of potentially conflicting [`SystemParam`]s allowed by disjoint access.
@@ -367,6 +380,7 @@ pub struct ParamSet<'w, 's, T: SystemParam> {
     param_states: &'s mut T::State,
     world: UnsafeWorldCell<'w>,
     system_meta: SystemMeta,
+    #[cfg(feature = "change_detection")]
     change_tick: Tick,
 }
 
@@ -473,25 +487,41 @@ unsafe impl<'a, T: Resource> SystemParam for Res<'a, T> {
         &mut component_id: &'s mut Self::State,
         system_meta: &SystemMeta,
         world: UnsafeWorldCell<'w>,
-        change_tick: Tick,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
     ) -> Self::Item<'w, 's> {
-        let (ptr, ticks) = world
-            .get_resource_with_ticks(component_id)
-            .unwrap_or_else(|| {
+        #[cfg(feature = "change_detection")]
+        {
+            let (ptr, ticks) = world
+                .get_resource_with_ticks(component_id)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Resource requested by {} does not exist: {}",
+                        system_meta.name,
+                        std::any::type_name::<T>()
+                    )
+                });
+            Res {
+                value: ptr.deref(),
+                #[cfg(feature = "change_detection")]
+                ticks: Ticks {
+                    added: ticks.added.deref(),
+                    changed: ticks.changed.deref(),
+                    last_run: system_meta.last_run,
+                    this_run: change_tick,
+                },
+            }
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
+            let ptr = world.get_resource_by_id(component_id).unwrap_or_else(|| {
                 panic!(
-                    "Resource requested by {} does not exist: {}",
-                    system_meta.name,
+                    "Resource requested by {{}} does not exist: {}",
+                    //system_meta.name,
                     std::any::type_name::<T>()
                 )
             });
-        Res {
-            value: ptr.deref(),
-            ticks: Ticks {
-                added: ticks.added.deref(),
-                changed: ticks.changed.deref(),
-                last_run: system_meta.last_run,
-                this_run: change_tick,
-            },
+            Res { value: ptr.deref() }
         }
     }
 }
@@ -513,19 +543,29 @@ unsafe impl<'a, T: Resource> SystemParam for Option<Res<'a, T>> {
         &mut component_id: &'s mut Self::State,
         system_meta: &SystemMeta,
         world: UnsafeWorldCell<'w>,
-        change_tick: Tick,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
     ) -> Self::Item<'w, 's> {
-        world
-            .get_resource_with_ticks(component_id)
-            .map(|(ptr, ticks)| Res {
-                value: ptr.deref(),
-                ticks: Ticks {
-                    added: ticks.added.deref(),
-                    changed: ticks.changed.deref(),
-                    last_run: system_meta.last_run,
-                    this_run: change_tick,
-                },
-            })
+        #[cfg(feature = "change_detection")]
+        {
+            world
+                .get_resource_with_ticks(component_id)
+                .map(|(ptr, ticks)| Res {
+                    value: ptr.deref(),
+                    ticks: Ticks {
+                        added: ticks.added.deref(),
+                        changed: ticks.changed.deref(),
+                        last_run: system_meta.last_run,
+                        this_run: change_tick,
+                    },
+                })
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
+            world
+                .get_resource_by_id(component_id)
+                .map(|ptr| Res { value: ptr.deref() })
+        }
     }
 }
 
@@ -568,7 +608,7 @@ unsafe impl<'a, T: Resource> SystemParam for ResMut<'a, T> {
         &mut component_id: &'s mut Self::State,
         system_meta: &SystemMeta,
         world: UnsafeWorldCell<'w>,
-        change_tick: Tick,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
     ) -> Self::Item<'w, 's> {
         let value = world
             .get_resource_mut_by_id(component_id)
@@ -581,6 +621,7 @@ unsafe impl<'a, T: Resource> SystemParam for ResMut<'a, T> {
             });
         ResMut {
             value: value.value.deref_mut::<T>(),
+            #[cfg(feature = "change_detection")]
             ticks: TicksMut {
                 added: value.ticks.added,
                 changed: value.ticks.changed,
@@ -605,12 +646,13 @@ unsafe impl<'a, T: Resource> SystemParam for Option<ResMut<'a, T>> {
         &mut component_id: &'s mut Self::State,
         system_meta: &SystemMeta,
         world: UnsafeWorldCell<'w>,
-        change_tick: Tick,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
     ) -> Self::Item<'w, 's> {
         world
             .get_resource_mut_by_id(component_id)
             .map(|value| ResMut {
                 value: value.value.deref_mut::<T>(),
+                #[cfg(feature = "change_detection")]
                 ticks: TicksMut {
                     added: value.ticks.added,
                     changed: value.ticks.changed,
@@ -657,7 +699,7 @@ unsafe impl SystemParam for &'_ World {
         _state: &'s mut Self::State,
         _system_meta: &SystemMeta,
         world: UnsafeWorldCell<'w>,
-        _change_tick: Tick,
+        #[cfg(feature = "change_detection")] _change_tick: Tick,
     ) -> Self::Item<'w, 's> {
         // SAFETY: Read-only access to the entire world was registered in `init_state`.
         unsafe { world.world() }
@@ -771,7 +813,7 @@ unsafe impl<'a, T: FromWorld + Send + 'static> SystemParam for Local<'a, T> {
         state: &'s mut Self::State,
         _system_meta: &SystemMeta,
         _world: UnsafeWorldCell<'w>,
-        _change_tick: Tick,
+        #[cfg(feature = "change_detection")] _change_tick: Tick,
     ) -> Self::Item<'w, 's> {
         Local(state.get())
     }
@@ -952,9 +994,9 @@ unsafe impl<T: SystemBuffer> SystemParam for Deferred<'_, T> {
 
     unsafe fn get_param<'w, 's>(
         state: &'s mut Self::State,
-        _system_meta: &SystemMeta,
+        system_meta: &SystemMeta,
         _world: UnsafeWorldCell<'w>,
-        _change_tick: Tick,
+        #[cfg(feature = "change_detection")] _change_tick: Tick,
     ) -> Self::Item<'w, 's> {
         Deferred(state.get())
     }
@@ -974,8 +1016,11 @@ unsafe impl<T: SystemBuffer> SystemParam for Deferred<'_, T> {
 /// Use `Option<NonSend<T>>` instead if the resource might not always exist.
 pub struct NonSend<'w, T: 'static> {
     pub(crate) value: &'w T,
+    #[cfg(feature = "change_detection")]
     ticks: ComponentTicks,
+    #[cfg(feature = "change_detection")]
     last_run: Tick,
+    #[cfg(feature = "change_detection")]
     this_run: Tick,
 }
 
@@ -991,6 +1036,7 @@ where
     }
 }
 
+#[cfg(feature = "change_detection")]
 impl<'w, T: 'static> NonSend<'w, T> {
     /// Returns `true` if the resource was added after the system last ran.
     pub fn is_added(&self) -> bool {
@@ -1014,11 +1060,14 @@ impl<'a, T> From<NonSendMut<'a, T>> for NonSend<'a, T> {
     fn from(nsm: NonSendMut<'a, T>) -> Self {
         Self {
             value: nsm.value,
+            #[cfg(feature = "change_detection")]
             ticks: ComponentTicks {
                 added: nsm.ticks.added.to_owned(),
                 changed: nsm.ticks.changed.to_owned(),
             },
+            #[cfg(feature = "change_detection")]
             this_run: nsm.ticks.this_run,
+            #[cfg(feature = "change_detection")]
             last_run: nsm.ticks.last_run,
         }
     }
@@ -1062,23 +1111,41 @@ unsafe impl<'a, T: 'static> SystemParam for NonSend<'a, T> {
         &mut component_id: &'s mut Self::State,
         system_meta: &SystemMeta,
         world: UnsafeWorldCell<'w>,
-        change_tick: Tick,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
     ) -> Self::Item<'w, 's> {
-        let (ptr, ticks) = world
-            .get_non_send_with_ticks(component_id)
-            .unwrap_or_else(|| {
-                panic!(
-                    "Non-send resource requested by {} does not exist: {}",
-                    system_meta.name,
-                    std::any::type_name::<T>()
-                )
-            });
+        #[cfg(feature = "change_detection")]
+        {
+            let (ptr, ticks) = world
+                .get_non_send_with_ticks(component_id)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Non-send resource requested by {} does not exist: {}",
+                        system_meta.name,
+                        std::any::type_name::<T>()
+                    )
+                });
 
-        NonSend {
-            value: ptr.deref(),
-            ticks: ticks.read(),
-            last_run: system_meta.last_run,
-            this_run: change_tick,
+            NonSend {
+                value: ptr.deref(),
+                ticks: ticks.read(),
+                last_run: system_meta.last_run,
+                this_run: change_tick,
+            }
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
+            let ptr = world
+                .get_non_send_resource_by_id(component_id)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Non-send resource requested by {} does not exist: {}",
+                        system_meta.name,
+                        std::any::type_name::<T>()
+                    )
+                });
+
+            NonSend { value: ptr.deref() }
         }
     }
 }
@@ -1100,16 +1167,29 @@ unsafe impl<T: 'static> SystemParam for Option<NonSend<'_, T>> {
         &mut component_id: &'s mut Self::State,
         system_meta: &SystemMeta,
         world: UnsafeWorldCell<'w>,
-        change_tick: Tick,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
     ) -> Self::Item<'w, 's> {
-        world
-            .get_non_send_with_ticks(component_id)
-            .map(|(ptr, ticks)| NonSend {
-                value: ptr.deref(),
-                ticks: ticks.read(),
-                last_run: system_meta.last_run,
-                this_run: change_tick,
-            })
+        #[cfg(feature = "change_detection")]
+        {
+            world
+                .get_non_send_with_ticks(component_id)
+                .map(|(ptr, ticks)| NonSend {
+                    value: ptr.deref(),
+                    #[cfg(feature = "change_detection")]
+                    ticks: ticks.read(),
+                    #[cfg(feature = "change_detection")]
+                    last_run: system_meta.last_run,
+                    #[cfg(feature = "change_detection")]
+                    this_run: change_tick,
+                })
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
+            world
+                .get_non_send_resource_by_id(component_id)
+                .map(|ptr| NonSend { value: ptr.deref() })
+        }
     }
 }
 
@@ -1154,20 +1234,40 @@ unsafe impl<'a, T: 'static> SystemParam for NonSendMut<'a, T> {
         &mut component_id: &'s mut Self::State,
         system_meta: &SystemMeta,
         world: UnsafeWorldCell<'w>,
-        change_tick: Tick,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
     ) -> Self::Item<'w, 's> {
-        let (ptr, ticks) = world
-            .get_non_send_with_ticks(component_id)
-            .unwrap_or_else(|| {
-                panic!(
-                    "Non-send resource requested by {} does not exist: {}",
-                    system_meta.name,
-                    std::any::type_name::<T>()
-                )
-            });
-        NonSendMut {
-            value: ptr.assert_unique().deref_mut(),
-            ticks: TicksMut::from_tick_cells(ticks, system_meta.last_run, change_tick),
+        #[cfg(feature = "change_detection")]
+        {
+            let (ptr, ticks) = world
+                .get_non_send_with_ticks(component_id)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Non-send resource requested by {} does not exist: {}",
+                        system_meta.name,
+                        std::any::type_name::<T>()
+                    )
+                });
+            NonSendMut {
+                value: ptr.assert_unique().deref_mut(),
+                #[cfg(feature = "change_detection")]
+                ticks: TicksMut::from_tick_cells(ticks, system_meta.last_run, change_tick),
+            }
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
+            let ptr = world
+                .get_non_send_resource_by_id(component_id)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Non-send resource requested by {} does not exist: {}",
+                        system_meta.name,
+                        std::any::type_name::<T>()
+                    )
+                });
+            NonSendMut {
+                value: ptr.assert_unique().deref_mut(),
+            }
         }
     }
 }
@@ -1186,14 +1286,26 @@ unsafe impl<'a, T: 'static> SystemParam for Option<NonSendMut<'a, T>> {
         &mut component_id: &'s mut Self::State,
         system_meta: &SystemMeta,
         world: UnsafeWorldCell<'w>,
-        change_tick: Tick,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
     ) -> Self::Item<'w, 's> {
-        world
-            .get_non_send_with_ticks(component_id)
-            .map(|(ptr, ticks)| NonSendMut {
-                value: ptr.assert_unique().deref_mut(),
-                ticks: TicksMut::from_tick_cells(ticks, system_meta.last_run, change_tick),
-            })
+        #[cfg(feature = "change_detection")]
+        {
+            world
+                .get_non_send_with_ticks(component_id)
+                .map(|(ptr, ticks)| NonSendMut {
+                    value: ptr.assert_unique().deref_mut(),
+                    ticks: TicksMut::from_tick_cells(ticks, system_meta.last_run, change_tick),
+                })
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
+            world
+                .get_non_send_resource_by_id(component_id)
+                .map(|ptr| NonSendMut {
+                    value: ptr.assert_unique().deref_mut(),
+                })
+        }
     }
 }
 
@@ -1212,7 +1324,7 @@ unsafe impl<'a> SystemParam for &'a Archetypes {
         _state: &'s mut Self::State,
         _system_meta: &SystemMeta,
         world: UnsafeWorldCell<'w>,
-        _change_tick: Tick,
+        #[cfg(feature = "change_detection")] _change_tick: Tick,
     ) -> Self::Item<'w, 's> {
         world.archetypes()
     }
@@ -1233,7 +1345,7 @@ unsafe impl<'a> SystemParam for &'a Components {
         _state: &'s mut Self::State,
         _system_meta: &SystemMeta,
         world: UnsafeWorldCell<'w>,
-        _change_tick: Tick,
+        #[cfg(feature = "change_detection")] _change_tick: Tick,
     ) -> Self::Item<'w, 's> {
         world.components()
     }
@@ -1254,7 +1366,7 @@ unsafe impl<'a> SystemParam for &'a Entities {
         _state: &'s mut Self::State,
         _system_meta: &SystemMeta,
         world: UnsafeWorldCell<'w>,
-        _change_tick: Tick,
+        #[cfg(feature = "change_detection")] _change_tick: Tick,
     ) -> Self::Item<'w, 's> {
         world.entities()
     }
@@ -1275,7 +1387,7 @@ unsafe impl<'a> SystemParam for &'a Bundles {
         _state: &'s mut Self::State,
         _system_meta: &SystemMeta,
         world: UnsafeWorldCell<'w>,
-        _change_tick: Tick,
+        #[cfg(feature = "change_detection")] _change_tick: Tick,
     ) -> Self::Item<'w, 's> {
         world.bundles()
     }
@@ -1290,12 +1402,14 @@ unsafe impl<'a> SystemParam for &'a Bundles {
 /// Component change ticks that are more recent than `last_run` will be detected by the system.
 /// Those can be read by calling [`last_changed`](crate::change_detection::DetectChanges::last_changed)
 /// on a [`Mut<T>`](crate::change_detection::Mut) or [`ResMut<T>`](ResMut).
+#[cfg(feature = "change_detection")]
 #[derive(Debug)]
 pub struct SystemChangeTick {
     last_run: Tick,
     this_run: Tick,
 }
 
+#[cfg(feature = "change_detection")]
 impl SystemChangeTick {
     /// Returns the current [`World`] change tick seen by the system.
     #[inline]
@@ -1311,9 +1425,11 @@ impl SystemChangeTick {
 }
 
 // SAFETY: Only reads internal system state
+#[cfg(feature = "change_detection")]
 unsafe impl ReadOnlySystemParam for SystemChangeTick {}
 
 // SAFETY: `SystemChangeTick` doesn't require any world access
+#[cfg(feature = "change_detection")]
 unsafe impl SystemParam for SystemChangeTick {
     type State = ();
     type Item<'w, 's> = SystemChangeTick;
@@ -1362,6 +1478,7 @@ macro_rules! impl_system_param_tuple {
 
             #[inline]
             #[allow(clippy::unused_unit)]
+            #[cfg(feature = "change_detection")]
             unsafe fn get_param<'w, 's>(
                 state: &'s mut Self::State,
                 _system_meta: &SystemMeta,
@@ -1371,6 +1488,19 @@ macro_rules! impl_system_param_tuple {
 
                 let ($($param,)*) = state;
                 ($($param::get_param($param, _system_meta, _world, _change_tick),)*)
+            }
+
+            #[inline]
+            #[allow(clippy::unused_unit)]
+            #[cfg(not(feature = "change_detection"))]
+            unsafe fn get_param<'w, 's>(
+                state: &'s mut Self::State,
+                _system_meta: &SystemMeta,
+                _world: UnsafeWorldCell<'w>,
+            ) -> Self::Item<'w, 's> {
+
+                let ($($param,)*) = state;
+                ($($param::get_param($param, _system_meta, _world),)*)
             }
         }
     };
@@ -1507,10 +1637,18 @@ unsafe impl<P: SystemParam + 'static> SystemParam for StaticSystemParam<'_, '_, 
         state: &'state mut Self::State,
         system_meta: &SystemMeta,
         world: UnsafeWorldCell<'world>,
-        change_tick: Tick,
+        #[cfg(feature = "change_detection")] change_tick: Tick,
     ) -> Self::Item<'world, 'state> {
         // SAFETY: Defer to the safety of P::SystemParam
-        StaticSystemParam(unsafe { P::get_param(state, system_meta, world, change_tick) })
+        StaticSystemParam(unsafe {
+            P::get_param(
+                state,
+                system_meta,
+                world,
+                #[cfg(feature = "change_detection")]
+                change_tick,
+            )
+        })
     }
 }
 
@@ -1525,7 +1663,7 @@ unsafe impl<T: ?Sized> SystemParam for PhantomData<T> {
         _state: &'state mut Self::State,
         _system_meta: &SystemMeta,
         _world: UnsafeWorldCell<'world>,
-        _change_tick: Tick,
+        #[cfg(feature = "change_detection")] _change_tick: Tick,
     ) -> Self::Item<'world, 'state> {
         PhantomData
     }

@@ -2,17 +2,19 @@ use fixedbitset::FixedBitSet;
 use std::panic::AssertUnwindSafe;
 
 use crate::{
-    schedule::{
-        executor::is_apply_deferred, BoxedCondition, ExecutorKind, SystemExecutor, SystemSchedule,
-    },
+    schedule::{executor::is_apply_deferred, ExecutorKind, SystemExecutor, SystemSchedule},
     world::World,
 };
+
+#[cfg(feature = "run_conditions")]
+use crate::schedule::BoxedCondition;
 
 /// A variant of [`SingleThreadedExecutor`](crate::schedule::SingleThreadedExecutor) that calls
 /// [`apply_deferred`](crate::system::System::apply_deferred) immediately after running each system.
 #[derive(Default)]
 pub struct SimpleExecutor {
     /// Systems sets whose conditions have been evaluated.
+    #[cfg(feature = "run_conditions")]
     evaluated_sets: FixedBitSet,
     /// Systems that have run or been skipped.
     completed_systems: FixedBitSet,
@@ -26,13 +28,18 @@ impl SystemExecutor for SimpleExecutor {
     fn init(&mut self, schedule: &SystemSchedule) {
         let sys_count = schedule.system_ids.len();
         let set_count = schedule.set_ids.len();
-        self.evaluated_sets = FixedBitSet::with_capacity(set_count);
+        #[cfg(feature = "run_conditions")]
+        {
+            self.evaluated_sets = FixedBitSet::with_capacity(set_count);
+        }
         self.completed_systems = FixedBitSet::with_capacity(sys_count);
     }
 
     fn run(&mut self, schedule: &mut SystemSchedule, world: &mut World) {
         for system_index in 0..schedule.systems.len() {
             let mut should_run = !self.completed_systems.contains(system_index);
+
+            #[cfg(feature = "run_conditions")]
             for set_idx in schedule.sets_with_conditions_of_systems[system_index].ones() {
                 if self.evaluated_sets.contains(set_idx) {
                     continue;
@@ -48,14 +55,26 @@ impl SystemExecutor for SimpleExecutor {
                 }
 
                 should_run &= set_conditions_met;
+
                 self.evaluated_sets.insert(set_idx);
             }
 
             // evaluate system's conditions
-            let system_conditions_met =
-                evaluate_and_fold_conditions(&mut schedule.system_conditions[system_index], world);
 
-            should_run &= system_conditions_met;
+            #[cfg(feature = "run_conditions")]
+            {
+                let system_conditions_met = evaluate_and_fold_conditions(
+                    &mut schedule.system_conditions[system_index],
+                    world,
+                );
+
+                should_run &= system_conditions_met;
+            }
+
+            #[cfg(not(feature = "run_conditions"))]
+            {
+                should_run &= true;
+            }
 
             // system has either been skipped or will run
             self.completed_systems.insert(system_index);
@@ -92,12 +111,14 @@ impl SimpleExecutor {
     /// This calls each system in order and immediately calls [`System::apply_deferred`](crate::system::System::apply_deferred).
     pub const fn new() -> Self {
         Self {
+            #[cfg(feature = "run_conditions")]
             evaluated_sets: FixedBitSet::new(),
             completed_systems: FixedBitSet::new(),
         }
     }
 }
 
+#[cfg(feature = "run_conditions")]
 fn evaluate_and_fold_conditions(conditions: &mut [BoxedCondition], world: &mut World) -> bool {
     // not short-circuiting is intentional
     #[allow(clippy::unnecessary_fold)]

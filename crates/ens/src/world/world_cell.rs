@@ -2,11 +2,14 @@ use log::error;
 
 use crate::{
     archetype::ArchetypeComponentId,
-    event::{Event, Events},
     storage::SparseSet,
     system::Resource,
     world::{Mut, World},
 };
+
+#[cfg(feature = "events")]
+use crate::event::{Event, Events};
+
 use std::{
     any::TypeId,
     cell::RefCell,
@@ -338,17 +341,20 @@ impl<'w> WorldCell<'w> {
 
     /// Sends an [`Event`].
     #[inline]
+    #[cfg(feature = "events")]
     pub fn send_event<E: Event>(&self, event: E) {
         self.send_event_batch(std::iter::once(event));
     }
 
     /// Sends the default value of the [`Event`] of type `E`.
+    #[cfg(feature = "events")]
     #[inline]
     pub fn send_event_default<E: Event + Default>(&self) {
         self.send_event_batch(std::iter::once(E::default()));
     }
 
     /// Sends a batch of [`Event`]s from an iterator.
+    #[cfg(feature = "events")]
     #[inline]
     pub fn send_event_batch<E: Event>(&self, events: impl Iterator<Item = E>) {
         match self.get_resource_mut::<Events<E>>() {

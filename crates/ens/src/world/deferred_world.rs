@@ -1,14 +1,16 @@
 use std::ops::Deref;
 
 use crate::{
-    change_detection::MutUntyped,
+    access::MutUntyped,
     component::ComponentId,
     entity::Entity,
-    event::{Event, EventId, Events, SendBatchIds},
     prelude::{Component, QueryState},
     query::{QueryData, QueryFilter},
     system::{Commands, Query, Resource},
 };
+
+#[cfg(feature = "events")]
+use crate::event::{Event, EventId, Events, SendBatchIds};
 
 use super::{
     unsafe_world_cell::{UnsafeEntityCell, UnsafeWorldCell},
@@ -115,7 +117,9 @@ impl<'w> DeferredWorld<'w> {
             Query::new(
                 world_cell,
                 state,
+                #[cfg(feature = "change_detection")]
                 world_cell.last_change_tick(),
+                #[cfg(feature = "change_detection")]
                 world_cell.change_tick(),
             )
         }
@@ -133,10 +137,7 @@ impl<'w> DeferredWorld<'w> {
         match self.get_resource_mut() {
             Some(x) => x,
             None => panic!(
-                "Requested resource {} does not exist in the `World`. 
-                Did you forget to add it using `app.insert_resource` / `app.init_resource`? 
-                Resources are also implicitly added via `app.add_event`,
-                and can be added by plugins.",
+                "Requested resource {} does not exist in the `World`.",
                 std::any::type_name::<R>()
             ),
         }
@@ -163,9 +164,7 @@ impl<'w> DeferredWorld<'w> {
         match self.get_non_send_resource_mut() {
             Some(x) => x,
             None => panic!(
-                "Requested non-send resource {} does not exist in the `World`. 
-                Did you forget to add it using `app.insert_non_send_resource` / `app.init_non_send_resource`? 
-                Non-send resources can also be added by plugins.",
+                "Requested non-send resource {} does not exist in the `World`.",
                 std::any::type_name::<R>()
             ),
         }
@@ -186,6 +185,7 @@ impl<'w> DeferredWorld<'w> {
     /// This method returns the [ID](`EventId`) of the sent `event`,
     /// or [`None`] if the `event` could not be sent.
     #[inline]
+    #[cfg(feature = "events")]
     pub fn send_event<E: Event>(&mut self, event: E) -> Option<EventId<E>> {
         self.send_event_batch(std::iter::once(event))?.next()
     }
@@ -193,6 +193,7 @@ impl<'w> DeferredWorld<'w> {
     /// Sends the default value of the [`Event`] of type `E`.
     /// This method returns the [ID](`EventId`) of the sent `event`,
     /// or [`None`] if the `event` could not be sent.
+    #[cfg(feature = "events")]
     #[inline]
     pub fn send_event_default<E: Event + Default>(&mut self) -> Option<EventId<E>> {
         self.send_event(E::default())
@@ -201,6 +202,7 @@ impl<'w> DeferredWorld<'w> {
     /// Sends a batch of [`Event`]s from an iterator.
     /// This method returns the [IDs](`EventId`) of the sent `events`,
     /// or [`None`] if the `event` could not be sent.
+    #[cfg(feature = "events")]
     #[inline]
     pub fn send_event_batch<E: Event>(
         &mut self,
@@ -262,6 +264,7 @@ impl<'w> DeferredWorld<'w> {
     ///
     /// # Safety
     /// Caller must ensure [`ComponentId`] in target exist in self.
+    #[cfg(feature = "component_hooks")]
     #[inline]
     pub(crate) unsafe fn trigger_on_add(
         &mut self,
@@ -281,6 +284,7 @@ impl<'w> DeferredWorld<'w> {
     ///
     /// # Safety
     /// Caller must ensure [`ComponentId`] in target exist in self.
+    #[cfg(feature = "component_hooks")]
     #[inline]
     pub(crate) unsafe fn trigger_on_insert(
         &mut self,
@@ -300,6 +304,7 @@ impl<'w> DeferredWorld<'w> {
     ///
     /// # Safety
     /// Caller must ensure [`ComponentId`] in target exist in self.
+    #[cfg(feature = "component_hooks")]
     #[inline]
     pub(crate) unsafe fn trigger_on_remove(
         &mut self,

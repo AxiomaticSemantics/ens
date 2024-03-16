@@ -1,11 +1,14 @@
 use crate::{
     archetype::Archetype,
-    component::{Component, ComponentId, StorageType, Tick},
+    component::{Component, ComponentId, StorageType},
     entity::Entity,
     query::{DebugCheckedUnwrap, FilteredAccess, WorldQuery},
     storage::{Column, ComponentSparseSet, Table, TableRow},
     world::{unsafe_world_cell::UnsafeWorldCell, World},
 };
+
+#[cfg(feature = "change_detection")]
+use crate::{change_detection::change_detection_impl, component::Tick};
 
 use ens_ptr::{ThinSlicePtr, UnsafeCellDeref};
 use ens_utils::all_tuples;
@@ -137,8 +140,8 @@ unsafe impl<T: Component> WorldQuery for With<T> {
     unsafe fn init_fetch(
         _world: UnsafeWorldCell,
         _state: &ComponentId,
-        _last_run: Tick,
-        _this_run: Tick,
+        #[cfg(feature = "change_detection")] _last_run: Tick,
+        #[cfg(feature = "change_detection")] _this_run: Tick,
     ) {
     }
 
@@ -244,8 +247,8 @@ unsafe impl<T: Component> WorldQuery for Without<T> {
     unsafe fn init_fetch(
         _world: UnsafeWorldCell,
         _state: &ComponentId,
-        _last_run: Tick,
-        _this_run: Tick,
+        #[cfg(feature = "change_detection")] _last_run: Tick,
+        #[cfg(feature = "change_detection")] _this_run: Tick,
     ) {
     }
 
@@ -377,11 +380,21 @@ macro_rules! impl_query_filter_tuple {
             const IS_DENSE: bool = true $(&& $filter::IS_DENSE)*;
 
             #[inline]
-            unsafe fn init_fetch<'w>(world: UnsafeWorldCell<'w>, state: &Self::State, last_run: Tick, this_run: Tick) -> Self::Fetch<'w> {
+            unsafe fn init_fetch<'w>(
+                world: UnsafeWorldCell<'w>,
+                state: &Self::State,
+                #[cfg(feature = "change_detection")] last_run: Tick,
+                #[cfg(feature = "change_detection")] this_run: Tick
+            ) -> Self::Fetch<'w> {
                 let ($($filter,)*) = state;
                 ($(OrFetch {
                     // SAFETY: The invariants are uphold by the caller.
-                    fetch: unsafe { $filter::init_fetch(world, $filter, last_run, this_run) },
+                    fetch: unsafe { $filter::init_fetch(
+                        world,
+                        $filter,
+                        #[cfg(feature = "change_detection")] last_run,
+                        #[cfg(feature = "change_detection")] this_run,
+                    ) },
                     matches: false,
                 },)*)
             }
@@ -572,9 +585,12 @@ pub struct Added<T>(PhantomData<T>);
 #[doc(hidden)]
 #[derive(Clone)]
 pub struct AddedFetch<'w> {
+    #[cfg(feature = "change_detection")]
     table_ticks: Option<ThinSlicePtr<'w, UnsafeCell<Tick>>>,
     sparse_set: Option<&'w ComponentSparseSet>,
+    #[cfg(feature = "change_detection")]
     last_run: Tick,
+    #[cfg(feature = "change_detection")]
     this_run: Tick,
 }
 
@@ -596,14 +612,17 @@ unsafe impl<T: Component> WorldQuery for Added<T> {
     unsafe fn init_fetch<'w>(
         world: UnsafeWorldCell<'w>,
         &id: &ComponentId,
-        last_run: Tick,
-        this_run: Tick,
+        #[cfg(feature = "change_detection")] last_run: Tick,
+        #[cfg(feature = "change_detection")] this_run: Tick,
     ) -> Self::Fetch<'w> {
         Self::Fetch::<'w> {
+            #[cfg(feature = "change_detection")]
             table_ticks: None,
             sparse_set: (T::STORAGE_TYPE == StorageType::SparseSet)
                 .then(|| world.storages().sparse_sets.get(id).debug_checked_unwrap()),
+            #[cfg(feature = "change_detection")]
             last_run,
+            #[cfg(feature = "change_detection")]
             this_run,
         }
     }
@@ -636,10 +655,20 @@ unsafe impl<T: Component> WorldQuery for Added<T> {
         &component_id: &ComponentId,
         table: &'w Table,
     ) {
-        fetch.table_ticks = Some(
-            Column::get_added_ticks_slice(table.get_column(component_id).debug_checked_unwrap())
+        #[cfg(feature = "change_detection")]
+        {
+            fetch.table_ticks = Some(
+                Column::get_added_ticks_slice(
+                    table.get_column(component_id).debug_checked_unwrap(),
+                )
                 .into(),
-        );
+            );
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
+            // FIXME ebola
+        }
     }
 
     #[inline(always)]
@@ -650,22 +679,42 @@ unsafe impl<T: Component> WorldQuery for Added<T> {
     ) -> Self::Item<'w> {
         match T::STORAGE_TYPE {
             StorageType::Table => {
-                // SAFETY: STORAGE_TYPE = Table
-                let table = unsafe { fetch.table_ticks.debug_checked_unwrap() };
-                // SAFETY: The caller ensures `table_row` is in range.
-                let tick = unsafe { table.get(table_row.as_usize()) };
+                #[cfg(feature = "change_detection")]
+                {
+                    // SAFETY: STORAGE_TYPE = Table
+                    let table = unsafe { fetch.table_ticks.debug_checked_unwrap() };
+                    // SAFETY: The caller ensures `table_row` is in range.
+                    let tick = unsafe { table.get(table_row.as_usize()) };
 
-                tick.deref().is_newer_than(fetch.last_run, fetch.this_run)
+                    tick.deref().is_newer_than(fetch.last_run, fetch.this_run)
+                }
+
+                #[cfg(not(feature = "change_detection"))]
+                false
             }
             StorageType::SparseSet => {
                 // SAFETY: STORAGE_TYPE = SparseSet
                 let sparse_set = unsafe { &fetch.sparse_set.debug_checked_unwrap() };
-                // SAFETY: The caller ensures `entity` is in range.
-                let tick = unsafe {
-                    ComponentSparseSet::get_added_tick(sparse_set, entity).debug_checked_unwrap()
-                };
 
-                tick.deref().is_newer_than(fetch.last_run, fetch.this_run)
+                // SAFETY: The caller ensures `entity` is in range.
+                #[cfg(feature = "change_detection")]
+                {
+                    let tick = unsafe {
+                        ComponentSparseSet::get_added_tick(sparse_set, entity)
+                            .debug_checked_unwrap()
+                    };
+
+                    #[cfg(feature = "change_detection")]
+                    tick.deref().is_newer_than(fetch.last_run, fetch.this_run)
+                }
+
+                #[cfg(not(feature = "change_detection"))]
+                {
+                    let tick = unsafe {
+                        ComponentSparseSet::get(&sparse_set, entity).debug_checked_unwrap()
+                    };
+                    false
+                }
             }
         }
     }
@@ -776,8 +825,10 @@ impl<T: Component> QueryFilter for Added<T> {
 ///
 /// # ens::system::assert_is_system(print_moving_objects_system);
 /// ```
+#[cfg(feature = "change_detection")]
 pub struct Changed<T>(PhantomData<T>);
 
+#[cfg(feature = "change_detection")]
 #[doc(hidden)]
 #[derive(Clone)]
 pub struct ChangedFetch<'w> {
@@ -792,6 +843,7 @@ pub struct ChangedFetch<'w> {
 /// This is sound because `update_component_access` add read access for that component and panics when appropriate.
 /// `update_component_access` adds a `With` filter for a component.
 /// This is sound because `matches_component_set` returns whether the set contains that component.
+#[cfg(feature = "change_detection")]
 unsafe impl<T: Component> WorldQuery for Changed<T> {
     type Item<'w> = bool;
     type Fetch<'w> = ChangedFetch<'w>;
@@ -903,6 +955,7 @@ unsafe impl<T: Component> WorldQuery for Changed<T> {
     }
 }
 
+#[cfg(feature = "change_detection")]
 impl<T: Component> QueryFilter for Changed<T> {
     const IS_ARCHETYPAL: bool = false;
 

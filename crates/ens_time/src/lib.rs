@@ -29,6 +29,7 @@ pub mod prelude {
     pub use crate::{Stopwatch, Timer, TimerMode};
 }
 
+#[cfg(feature = "events")]
 use ens::event::{signal_event_update_system, EventUpdateSignal, EventUpdates};
 use ens::prelude::*;
 use ens_app::{prelude::*, PreUpdate};

@@ -1,5 +1,5 @@
 //! Contains APIs for ordering systems and executing them on a [`World`](crate::world::World)
-
+#[cfg(feature = "run_conditions")]
 mod condition;
 mod config;
 mod executor;
@@ -7,14 +7,18 @@ mod graph_utils;
 #[allow(clippy::module_inception)]
 mod schedule;
 mod set;
+#[cfg(feature = "states")]
 mod state;
 
+#[cfg(feature = "run_conditions")]
 pub use self::condition::*;
 pub use self::config::*;
 pub use self::executor::*;
 use self::graph_utils::*;
 pub use self::schedule::*;
 pub use self::set::*;
+
+#[cfg(feature = "states")]
 pub use self::state::*;
 
 pub use self::graph_utils::NodeId;
@@ -24,10 +28,11 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU32, Ordering};
 
-    pub use crate as ens;
-    pub use crate::schedule::{IntoSystemSetConfigs, Schedule, SystemSet};
-    pub use crate::system::{Res, ResMut};
-    pub use crate::{prelude::World, system::Resource};
+    use crate as ens;
+    use crate::access::{Res, ResMut};
+    use crate::schedule::{IntoSystemSetConfigs, Schedule, SystemSet};
+    use crate::system::Resource;
+    use crate::world::World;
 
     #[derive(SystemSet, Clone, Debug, PartialEq, Eq, Hash)]
     enum TestSet {

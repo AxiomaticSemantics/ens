@@ -1,7 +1,10 @@
-use crate::component::Tick;
 use crate::prelude::World;
 use crate::system::{ExclusiveSystemParam, ReadOnlySystemParam, SystemMeta, SystemParam};
 use crate::world::unsafe_world_cell::UnsafeWorldCell;
+
+#[cfg(feature = "change_detection")]
+use crate::component::Tick;
+
 use std::borrow::Cow;
 use std::ops::Deref;
 
@@ -79,8 +82,8 @@ unsafe impl SystemParam for SystemName<'_> {
     unsafe fn get_param<'w, 's>(
         name: &'s mut Self::State,
         _system_meta: &SystemMeta,
-        _world: UnsafeWorldCell<'w>,
-        _change_tick: Tick,
+        world: UnsafeWorldCell<'w>,
+        #[cfg(feature = "change_detection")] _change_tick: Tick,
     ) -> Self::Item<'w, 's> {
         SystemName(name)
     }

@@ -5,13 +5,15 @@ use std::ops::Deref;
 
 use crate as ens;
 use crate::change_detection::DetectChangesMut;
+#[cfg(feature = "events")]
 use crate::event::Event;
 use crate::prelude::FromWorld;
 use crate::schedule::ScheduleLabel;
 use crate::system::Resource;
 use crate::world::World;
 
-pub use ens_macros::States;
+#[cfg(all(feature = "derive_macros", feature = "states"))]
+use ens_macros::States;
 
 /// Types that can define world-wide states in a finite-state machine.
 ///
@@ -168,6 +170,7 @@ impl<S: States> NextState<S> {
 /// Event sent when any state transition of `S` happens.
 ///
 /// If you know exactly what state you want to respond to ahead of time, consider [`OnEnter`], [`OnTransition`], or [`OnExit`]
+#[cfg(feature = "events")]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Event)]
 pub struct StateTransitionEvent<S: States> {
     /// the state we were in before
@@ -202,6 +205,7 @@ pub fn apply_state_transition<S: States>(world: &mut World) {
             Some(mut state_resource) => {
                 if *state_resource != entered {
                     let exited = mem::replace(&mut state_resource.0, entered.clone());
+                    #[cfg(feature = "events")]
                     world.send_event(StateTransitionEvent {
                         before: exited.clone(),
                         after: entered.clone(),

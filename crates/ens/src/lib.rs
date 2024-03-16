@@ -5,13 +5,15 @@
 #[cfg(target_pointer_width = "16")]
 compile_error!("ens cannot safely compile for a 16-bit platform.");
 
+pub mod access;
 pub mod archetype;
 pub mod bundle;
+#[cfg(feature = "change_detection")]
 pub mod change_detection;
 pub mod component;
 pub mod entity;
-pub mod identifier;
 pub mod query;
+#[cfg(all(feature = "change_detection", feature = "events"))]
 pub mod removal_detection;
 pub mod schedule;
 pub mod storage;
@@ -27,29 +29,46 @@ pub use ens_ptr as ptr;
 pub mod prelude {
     #[doc(hidden)]
     pub use crate::{
+        access::{Mut, NonSendMut, Ref, Res, ResMut},
         bundle::Bundle,
-        change_detection::{DetectChanges, DetectChangesMut, Mut, Ref},
         component::Component,
         entity::Entity,
-        //event::{Event, EventReader, EventWriter, Events},
-        query::{Added, AnyOf, Changed, Has, Or, QueryBuilder, QueryState, With, Without},
-        removal_detection::RemovedComponents,
+        query::{Added, AnyOf, Has, Or, QueryBuilder, QueryState, With, Without},
         schedule::{
-            apply_deferred, apply_state_transition, common_conditions::*, Condition,
-            IntoSystemConfigs, IntoSystemSet, IntoSystemSetConfigs, NextState, OnEnter, OnExit,
-            OnTransition, Schedule, Schedules, State, StateTransitionEvent, States, SystemSet,
+            apply_deferred, IntoSystemConfigs, IntoSystemSet, IntoSystemSetConfigs, Schedule,
+            Schedules, SystemSet,
         },
         system::{
-            Commands, Deferred, In, IntoSystem, Local, NonSend, NonSendMut, ParallelCommands,
-            ParamSet, Query, ReadOnlySystem, Res, ResMut, Resource, System, SystemParamFunction,
+            Commands, Deferred, In, IntoSystem, Local, NonSend, ParamSet, Query, ReadOnlySystem,
+            Resource, System, SystemParamFunction,
         },
         world::{EntityMut, EntityRef, EntityWorldMut, FromWorld, World},
     };
 
+    #[cfg(feature = "palallel_scope")]
+    pub use crate::system::ParallelCommands;
+
+    #[cfg(feature = "run_conditions")]
+    pub use crate::schedule::{common_conditions::*, Condition};
+
+    #[cfg(feature = "change_detection")]
+    pub use crate::{
+        change_detection::{DetectChanges, DetectChangesMut},
+        query::Changed,
+    };
+
     #[cfg(feature = "events")]
     pub use crate::event::{Event, EventReader, EventWriter, Events};
+    #[cfg(feature = "events")]
+    pub use crate::removal_detection::RemovedComponents;
+    #[cfg(all(feature = "states", feature = "events"))]
+    pub use crate::schedule::StateTransitionEvent;
+    #[cfg(feature = "states")]
+    pub use crate::schedule::{
+        apply_state_transition, NextState, OnEnter, OnExit, OnTransition, State, States,
+    };
 
-    #[cfg(feature = "entity_mapper")]
+    #[cfg(all(feature = "entity_hash", feature = "entity_mapper"))]
     pub use crate::entity::EntityMapper;
 }
 
@@ -58,13 +77,13 @@ mod tests {
     use crate as ens;
     use crate::prelude::Or;
     use crate::{
+        access::{Mut, Ref},
         bundle::Bundle,
-        change_detection::Ref,
         component::{Component, ComponentId},
         entity::Entity,
         query::{Added, Changed, FilteredAccess, QueryFilter, With, Without},
         system::Resource,
-        world::{EntityRef, Mut, World},
+        world::{EntityRef, World},
     };
     use ens_tasks::{ComputeTaskPool, TaskPool};
     use std::num::NonZeroU32;

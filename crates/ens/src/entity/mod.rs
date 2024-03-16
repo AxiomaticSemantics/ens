@@ -35,24 +35,20 @@
 //! [`World::despawn`]: crate::world::World::despawn
 //! [`EntityWorldMut::insert`]: crate::world::EntityWorldMut::insert
 //! [`EntityWorldMut::remove`]: crate::world::EntityWorldMut::remove
-#[cfg(feature = "entity_mapper")]
+#[cfg(all(feature = "entity_hash", feature = "entity_mapper"))]
 mod map_entities;
-#[cfg(feature = "entity_mapper")]
+#[cfg(all(feature = "entity_hash", feature = "entity_mapper"))]
 pub use map_entities::*;
 
+#[cfg(feature = "entity_hash")]
 mod hash;
+#[cfg(feature = "entity_hash")]
 pub use hash::*;
 
 use log::warn;
 
 use crate::{
     archetype::{ArchetypeId, ArchetypeRow},
-    identifier::{
-        error::IdentifierError,
-        kinds::IdKind,
-        masks::{IdentifierMask, HIGH_MASK},
-        Identifier,
-    },
     storage::{SparseSetIndex, TableId, TableRow},
 };
 #[cfg(feature = "serialize")]
@@ -71,6 +67,8 @@ type IdCursor = i64;
 use std::sync::atomic::AtomicIsize as AtomicIdCursor;
 #[cfg(not(target_has_atomic = "64"))]
 type IdCursor = isize;
+
+pub(crate) const HIGH_MASK: u32 = 0x7FFF_FFFF;
 
 /// Lightweight identifier of an [entity](crate::entity).
 ///
@@ -141,11 +139,6 @@ type IdCursor = isize;
 /// [`World`]: crate::world::World
 /// [SemVer]: https://semver.org/
 #[derive(Clone, Copy)]
-#[cfg_attr(feature = "reflect", derive(Reflect))]
-#[cfg_attr(
-    feature = "reflect",
-    reflect_value(Hash, PartialEq, Serialize, Deserialize)
-)]
 // Alignment repr necessary to allow LLVM to better output
 // optimised codegen for `to_bits`, `PartialEq` and `Ord`.
 #[repr(C, align(8))]
@@ -268,7 +261,7 @@ impl Entity {
     /// No particular structure is guaranteed for the returned bits.
     #[inline(always)]
     pub const fn to_bits(self) -> u64 {
-        IdentifierMask::pack_into_u64(self.index, self.generation.get())
+        (self.generation.get() as u64) << 32 | self.index as u64
     }
 
     /// Reconstruct an `Entity` previously destructured with [`Entity::to_bits`].
@@ -295,19 +288,15 @@ impl Entity {
     ///
     /// This method is the fallible counterpart to [`Entity::from_bits`].
     #[inline(always)]
-    pub const fn try_from_bits(bits: u64) -> Result<Self, IdentifierError> {
-        if let Ok(id) = Identifier::try_from_bits(bits) {
-            let kind = id.kind() as u8;
-
-            if kind == (IdKind::Entity as u8) {
-                return Ok(Self {
-                    index: id.low(),
-                    generation: id.high(),
-                });
-            }
+    pub const fn try_from_bits(bits: u64) -> Result<Self, &'static str> {
+        if let Some(generation) = NonZeroU32::new((bits >> 32) as u32) {
+            Ok(Self {
+                generation,
+                index: bits as u32,
+            })
+        } else {
+            Err("Invalid generation bits")
         }
-
-        Err(IdentifierError::InvalidEntityId(bits))
     }
 
     /// Return a transiently unique identifier.
@@ -326,23 +315,7 @@ impl Entity {
     #[inline(always)]
     pub const fn generation(self) -> u32 {
         // Mask so not to expose any flags
-        IdentifierMask::extract_value_from_high(self.generation.get())
-    }
-}
-
-impl TryFrom<Identifier> for Entity {
-    type Error = IdentifierError;
-
-    #[inline]
-    fn try_from(value: Identifier) -> Result<Self, Self::Error> {
-        Self::try_from_bits(value.to_bits())
-    }
-}
-
-impl From<Entity> for Identifier {
-    #[inline]
-    fn from(value: Entity) -> Self {
-        Identifier::from_bits(value.to_bits())
+        self.generation.get()
     }
 }
 
@@ -663,7 +636,7 @@ impl Entities {
             return None;
         }
 
-        meta.generation = IdentifierMask::inc_masked_high_by(meta.generation, 1);
+        meta.generation = inc_generation_by(meta.generation, 1);
 
         if meta.generation == NonZeroU32::MIN {
             warn!(
@@ -754,7 +727,7 @@ impl Entities {
 
         let meta = &mut self.meta[index as usize];
         if meta.location.archetype_id == ArchetypeId::INVALID {
-            meta.generation = IdentifierMask::inc_masked_high_by(meta.generation, generations);
+            meta.generation = inc_generation_by(meta.generation, generations);
             true
         } else {
             false
@@ -944,9 +917,21 @@ impl EntityLocation {
     };
 }
 
+/// Offsets a generation value by the specified amount, wrapping to 1 instead of 0
+pub(crate) const fn inc_generation_by(lhs: NonZeroU32, rhs: u32) -> NonZeroU32 {
+    let (lo, hi) = lhs.get().overflowing_add(rhs);
+    let ret = lo + hi as u32;
+    // SAFETY:
+    // - Adding the overflow flag will offet overflows to start at 1 instead of 0
+    // - The sum of `NonZeroU32::MAX` + `u32::MAX` + 1 (overflow) == `NonZeroU32::MAX`
+    // - If the operation doesn't overflow, no offsetting takes place
+    unsafe { NonZeroU32::new_unchecked(ret) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ens_utils::EntityHash;
 
     #[test]
     fn entity_niche_optimization() {

@@ -2,11 +2,15 @@
 name = "ens_utils"
 version = "0.14.0-dev"
 edition = "2021"
-description = "A collection of utils for Bevy Engine"
-homepage = "https://bevyengine.org"
-repository = "https://github.com/bevyengine/bevy"
+description = "A collection of utils for Ens"
+homepage = "https://github.com/AxiomaticSemantics/ens"
+repository = "https://github.com/AxiomaticSemantics/ens"
 license = "MIT OR Apache-2.0"
 keywords = ["bevy"]
+
+[features]
+hash = []
+default = []
 
 [dependencies]
 ens_utils_proc_macros = { version = "0.14.0-dev", path = "macros" }

@@ -1,6 +1,7 @@
 use core::fmt::Debug;
 use log::warn;
 
+#[cfg(feature = "change_detection")]
 use crate::component::Tick;
 use crate::schedule::InternedSystemSet;
 use crate::world::unsafe_world_cell::UnsafeWorldCell;
@@ -31,10 +32,11 @@ pub trait System: Send + Sync + 'static {
     /// Returns the system's name.
     fn name(&self) -> Cow<'static, str>;
     /// Returns the [`TypeId`] of the underlying system type.
-    #[inline]
+    #[inline(always)]
     fn type_id(&self) -> TypeId {
         TypeId::of::<Self>()
     }
+
     /// Returns the system's component [`Access`].
     fn component_access(&self) -> &Access<ComponentId>;
     /// Returns the system's archetype component [`Access`].
@@ -102,6 +104,7 @@ pub trait System: Send + Sync + 'static {
     ///
     /// This method must be called periodically to ensure that change detection behaves correctly.
     /// When using Ens's default configuration, this will be called for you as needed.
+    #[cfg(feature = "change_detection")]
     fn check_change_tick(&mut self, change_tick: Tick);
 
     /// Returns the system's default [system sets](crate::schedule::SystemSet).
@@ -110,6 +113,7 @@ pub trait System: Send + Sync + 'static {
     }
 
     /// Gets the tick indicating the last time this system ran.
+    #[cfg(feature = "change_detection")]
     fn get_last_run(&self) -> Tick;
 
     /// Overwrites the tick indicating the last time this system ran.
@@ -118,6 +122,7 @@ pub trait System: Send + Sync + 'static {
     /// This is a complex and error-prone operation, that can have unexpected consequences on any system relying on this code.
     /// However, it can be an essential escape hatch when, for example,
     /// you are trying to synchronize representations using change detection and need to avoid infinite recursion.
+    #[cfg(feature = "change_detection")]
     fn set_last_run(&mut self, last_run: Tick);
 }
 
@@ -152,6 +157,7 @@ pub unsafe trait ReadOnlySystem: System {
 /// A convenience type alias for a boxed [`System`] trait object.
 pub type BoxedSystem<In = (), Out = ()> = Box<dyn System<In = In, Out = Out>>;
 
+#[cfg(feature = "change_detection")]
 pub(crate) fn check_system_change_tick(last_run: &mut Tick, this_run: Tick, system_name: &str) {
     if last_run.check_tick(this_run) {
         let age = this_run.relative_to(*last_run).get();

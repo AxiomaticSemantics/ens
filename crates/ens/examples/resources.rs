@@ -1,7 +1,7 @@
 //! In this example we add a counter resource and increase it's value in one system,
 //! while a different system prints the current count to the console.
 
-use bevy_ecs::prelude::*;
+use ens::prelude::*;
 use rand::Rng;
 use std::ops::Deref;
 

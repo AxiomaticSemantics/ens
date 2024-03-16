@@ -1,5 +1,4 @@
 use crate::{
-    component::Tick,
     entity::Entity,
     query::{
         BatchingStrategy, QueryCombinationIter, QueryData, QueryEntityError, QueryFilter,
@@ -8,6 +7,10 @@ use crate::{
     },
     world::unsafe_world_cell::UnsafeWorldCell,
 };
+
+#[cfg(feature = "change_detection")]
+use crate::component::Tick;
+
 use std::borrow::Borrow;
 
 /// [System parameter] that provides selective access to the [`Component`] data stored in a [`World`].
@@ -350,17 +353,31 @@ pub struct Query<'world, 'state, D: QueryData, F: QueryFilter = ()> {
     // SAFETY: Must have access to the components registered in `state`.
     world: UnsafeWorldCell<'world>,
     state: &'state QueryState<D, F>,
+    #[cfg(feature = "change_detection")]
     last_run: Tick,
+    #[cfg(feature = "change_detection")]
     this_run: Tick,
 }
 
+#[cfg(feature = "change_detection")]
 impl<D: QueryData, F: QueryFilter> std::fmt::Debug for Query<'_, '_, D, F> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         f.debug_struct("Query")
             .field("matched_entities", &self.iter().count())
             .field("state", &self.state)
+            .field("world", &self.world)
             .field("last_run", &self.last_run)
             .field("this_run", &self.this_run)
+            .finish()
+    }
+}
+
+#[cfg(not(feature = "change_detection"))]
+impl<D: QueryData, F: QueryFilter> std::fmt::Debug for Query<'_, '_, D, F> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("Query")
+            .field("matched_entities", &self.iter().count())
+            .field("state", &self.state)
             .field("world", &self.world)
             .finish()
     }
@@ -381,15 +398,17 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     pub(crate) unsafe fn new(
         world: UnsafeWorldCell<'w>,
         state: &'s QueryState<D, F>,
-        last_run: Tick,
-        this_run: Tick,
+        #[cfg(feature = "change_detection")] last_run: Tick,
+        #[cfg(feature = "change_detection")] this_run: Tick,
     ) -> Self {
         state.validate_world(world.id());
 
         Self {
             world,
             state,
+            #[cfg(feature = "change_detection")]
             last_run,
+            #[cfg(feature = "change_detection")]
             this_run,
         }
     }
@@ -402,7 +421,16 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     pub fn to_readonly(&self) -> Query<'_, 's, D::ReadOnly, F> {
         let new_state = self.state.as_readonly();
         // SAFETY: This is memory safe because it turns the query immutable.
-        unsafe { Query::new(self.world, new_state, self.last_run, self.this_run) }
+        unsafe {
+            Query::new(
+                self.world,
+                new_state,
+                #[cfg(feature = "change_detection")]
+                self.last_run,
+                #[cfg(feature = "change_detection")]
+                self.this_run,
+            )
+        }
     }
 
     /// Returns an [`Iterator`] over the read-only query items.
@@ -434,9 +462,13 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
         // - `self.world` has permission to access the required components.
         // - The query is read-only, so it can be aliased even if it was originally mutable.
         unsafe {
-            self.state
-                .as_readonly()
-                .iter_unchecked_manual(self.world, self.last_run, self.this_run)
+            self.state.as_readonly().iter_unchecked_manual(
+                self.world,
+                #[cfg(feature = "change_detection")]
+                self.last_run,
+                #[cfg(feature = "change_detection")]
+                self.this_run,
+            )
         }
     }
 
@@ -467,8 +499,13 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     pub fn iter_mut(&mut self) -> QueryIter<'_, 's, D, F> {
         // SAFETY: `self.world` has permission to access the required components.
         unsafe {
-            self.state
-                .iter_unchecked_manual(self.world, self.last_run, self.this_run)
+            self.state.iter_unchecked_manual(
+                self.world,
+                #[cfg(feature = "change_detection")]
+                self.last_run,
+                #[cfg(feature = "change_detection")]
+                self.this_run,
+            )
         }
     }
 
@@ -501,7 +538,9 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
         unsafe {
             self.state.as_readonly().iter_combinations_unchecked_manual(
                 self.world,
+                #[cfg(feature = "change_detection")]
                 self.last_run,
+                #[cfg(feature = "change_detection")]
                 self.this_run,
             )
         }
@@ -532,8 +571,13 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ) -> QueryCombinationIter<'_, 's, D, F, K> {
         // SAFETY: `self.world` has permission to access the required components.
         unsafe {
-            self.state
-                .iter_combinations_unchecked_manual(self.world, self.last_run, self.this_run)
+            self.state.iter_combinations_unchecked_manual(
+                self.world,
+                #[cfg(feature = "change_detection")]
+                self.last_run,
+                #[cfg(feature = "change_detection")]
+                self.this_run,
+            )
         }
     }
 
@@ -588,7 +632,9 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
             self.state.as_readonly().iter_many_unchecked_manual(
                 entities,
                 self.world,
+                #[cfg(feature = "change_detection")]
                 self.last_run,
+                #[cfg(feature = "change_detection")]
                 self.this_run,
             )
         }
@@ -640,7 +686,9 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
             self.state.iter_many_unchecked_manual(
                 entities,
                 self.world,
+                #[cfg(feature = "change_detection")]
                 self.last_run,
+                #[cfg(feature = "change_detection")]
                 self.this_run,
             )
         }
@@ -662,8 +710,13 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
         // - `self.world` has permission to access the required components.
         // - The caller ensures that this operation will not result in any aliased mutable accesses.
         unsafe {
-            self.state
-                .iter_unchecked_manual(self.world, self.last_run, self.this_run)
+            self.state.iter_unchecked_manual(
+                self.world,
+                #[cfg(feature = "change_detection")]
+                self.last_run,
+                #[cfg(feature = "change_detection")]
+                self.this_run,
+            )
         }
     }
 
@@ -685,8 +738,13 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
         // - `self.world` has permission to access the required components.
         // - The caller ensures that this operation will not result in any aliased mutable accesses.
         unsafe {
-            self.state
-                .iter_combinations_unchecked_manual(self.world, self.last_run, self.this_run)
+            self.state.iter_combinations_unchecked_manual(
+                self.world,
+                #[cfg(feature = "change_detection")]
+                self.last_run,
+                #[cfg(feature = "change_detection")]
+                self.this_run,
+            )
         }
     }
 
@@ -715,7 +773,9 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
             self.state.iter_many_unchecked_manual(
                 entities,
                 self.world,
+                #[cfg(feature = "change_detection")]
                 self.last_run,
+                #[cfg(feature = "change_detection")]
                 self.this_run,
             )
         }
@@ -735,7 +795,9 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
         QueryParIter {
             world: self.world,
             state: self.state.as_readonly(),
+            #[cfg(feature = "change_detection")]
             last_run: self.last_run,
+            #[cfg(feature = "change_detection")]
             this_run: self.this_run,
             batching_strategy: BatchingStrategy::new(),
         }
@@ -770,7 +832,9 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
         QueryParIter {
             world: self.world,
             state: self.state,
+            #[cfg(feature = "change_detection")]
             last_run: self.last_run,
+            #[cfg(feature = "change_detection")]
             this_run: self.this_run,
             batching_strategy: BatchingStrategy::new(),
         }
@@ -815,7 +879,9 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
             self.state.as_readonly().get_unchecked_manual(
                 self.world,
                 entity,
+                #[cfg(feature = "change_detection")]
                 self.last_run,
+                #[cfg(feature = "change_detection")]
                 self.this_run,
             )
         }
@@ -840,8 +906,14 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
         // - `&self` ensures there is no mutable access to any components accessible to this query.
         // - `self.world` matches `self.state`.
         unsafe {
-            self.state
-                .get_many_read_only_manual(self.world, entities, self.last_run, self.this_run)
+            self.state.get_many_read_only_manual(
+                self.world,
+                entities,
+                #[cfg(feature = "change_detection")]
+                self.last_run,
+                #[cfg(feature = "change_detection")]
+                self.this_run,
+            )
         }
     }
 
@@ -926,8 +998,14 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
         // SAFETY: system runs without conflicts with other systems.
         // same-system queries have runtime borrow checks when they conflict
         unsafe {
-            self.state
-                .get_unchecked_manual(self.world, entity, self.last_run, self.this_run)
+            self.state.get_unchecked_manual(
+                self.world,
+                entity,
+                #[cfg(feature = "change_detection")]
+                self.last_run,
+                #[cfg(feature = "change_detection")]
+                self.this_run,
+            )
         }
     }
 
@@ -947,8 +1025,14 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
     ) -> Result<[D::Item<'_>; N], QueryEntityError> {
         // SAFETY: scheduler ensures safe Query world access
         unsafe {
-            self.state
-                .get_many_unchecked_manual(self.world, entities, self.last_run, self.this_run)
+            self.state.get_many_unchecked_manual(
+                self.world,
+                entities,
+                #[cfg(feature = "change_detection")]
+                self.last_run,
+                #[cfg(feature = "change_detection")]
+                self.this_run,
+            )
         }
     }
 
@@ -1025,8 +1109,14 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
         // SEMI-SAFETY: system runs without conflicts with other systems.
         // same-system queries have runtime borrow checks when they conflict
         unsafe {
-            self.state
-                .get_unchecked_manual(self.world, entity, self.last_run, self.this_run)
+            self.state.get_unchecked_manual(
+                self.world,
+                entity,
+                #[cfg(feature = "change_detection")]
+                self.last_run,
+                #[cfg(feature = "change_detection")]
+                self.this_run,
+            )
         }
     }
 
@@ -1099,7 +1189,9 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
         unsafe {
             self.state.as_readonly().get_single_unchecked_manual(
                 self.world,
+                #[cfg(feature = "change_detection")]
                 self.last_run,
+                #[cfg(feature = "change_detection")]
                 self.this_run,
             )
         }
@@ -1168,8 +1260,13 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
         // the query ensures mutable access to the components it accesses, and the query
         // is uniquely borrowed
         unsafe {
-            self.state
-                .get_single_unchecked_manual(self.world, self.last_run, self.this_run)
+            self.state.get_single_unchecked_manual(
+                self.world,
+                #[cfg(feature = "change_detection")]
+                self.last_run,
+                #[cfg(feature = "change_detection")]
+                self.this_run,
+            )
         }
     }
 
@@ -1200,8 +1297,13 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
         // - `&self` ensures that no one currently has write access.
         // - `self.world` matches `self.state`.
         unsafe {
-            self.state
-                .is_empty_unsafe_world_cell(self.world, self.last_run, self.this_run)
+            self.state.is_empty_unsafe_world_cell(
+                self.world,
+                #[cfg(feature = "change_detection")]
+                self.last_run,
+                #[cfg(feature = "change_detection")]
+                self.this_run,
+            )
         }
     }
 
@@ -1233,7 +1335,14 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
         unsafe {
             self.state
                 .as_nop()
-                .get_unchecked_manual(self.world, entity, self.last_run, self.this_run)
+                .get_unchecked_manual(
+                    self.world,
+                    entity,
+                    #[cfg(feature = "change_detection")]
+                    self.last_run,
+                    #[cfg(feature = "change_detection")]
+                    self.this_run,
+                )
                 .is_ok()
         }
     }
@@ -1317,7 +1426,9 @@ impl<'w, 's, D: QueryData, F: QueryFilter> Query<'w, 's, D, F> {
         QueryLens {
             world: self.world,
             state,
+            #[cfg(feature = "change_detection")]
             last_run: self.last_run,
+            #[cfg(feature = "change_detection")]
             this_run: self.this_run,
         }
     }
@@ -1387,7 +1498,9 @@ impl<'w, 's, D: ReadOnlyQueryData, F: QueryFilter> Query<'w, 's, D, F> {
             self.state.as_readonly().get_unchecked_manual(
                 self.world,
                 entity,
+                #[cfg(feature = "change_detection")]
                 self.last_run,
+                #[cfg(feature = "change_detection")]
                 self.this_run,
             )
         }
@@ -1421,9 +1534,13 @@ impl<'w, 's, D: ReadOnlyQueryData, F: QueryFilter> Query<'w, 's, D, F> {
         // SAFETY: system runs without conflicts with other systems.
         // same-system queries have runtime borrow checks when they conflict
         unsafe {
-            self.state
-                .as_readonly()
-                .iter_unchecked_manual(self.world, self.last_run, self.this_run)
+            self.state.as_readonly().iter_unchecked_manual(
+                self.world,
+                #[cfg(feature = "change_detection")]
+                self.last_run,
+                #[cfg(feature = "change_detection")]
+                self.this_run,
+            )
         }
     }
 }
@@ -1434,7 +1551,9 @@ impl<'w, 's, D: ReadOnlyQueryData, F: QueryFilter> Query<'w, 's, D, F> {
 pub struct QueryLens<'w, Q: QueryData, F: QueryFilter = ()> {
     world: UnsafeWorldCell<'w>,
     state: QueryState<Q, F>,
+    #[cfg(feature = "change_detection")]
     last_run: Tick,
+    #[cfg(feature = "change_detection")]
     this_run: Tick,
 }
 
@@ -1444,7 +1563,9 @@ impl<'w, Q: QueryData, F: QueryFilter> QueryLens<'w, Q, F> {
         Query {
             world: self.world,
             state: &self.state,
+            #[cfg(feature = "change_detection")]
             last_run: self.last_run,
+            #[cfg(feature = "change_detection")]
             this_run: self.this_run,
         }
     }

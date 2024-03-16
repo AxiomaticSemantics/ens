@@ -1,14 +1,14 @@
 use crate::{
     archetype::ArchetypeComponentId,
-    component::{ComponentId, Tick},
+    component::ComponentId,
     query::Access,
     schedule::{InternedSystemSet, SystemSet},
-    system::{
-        check_system_change_tick, ExclusiveSystemParam, ExclusiveSystemParamItem, In, IntoSystem,
-        System, SystemMeta,
-    },
+    system::{ExclusiveSystemParam, ExclusiveSystemParamItem, In, IntoSystem, System, SystemMeta},
     world::{unsafe_world_cell::UnsafeWorldCell, World},
 };
+
+#[cfg(feature = "change_detection")]
+use crate::{component::Tick, system::check_system_change_tick};
 
 use ens_utils::all_tuples;
 use std::{borrow::Cow, marker::PhantomData};
@@ -100,7 +100,26 @@ where
     }
 
     fn run(&mut self, input: Self::In, world: &mut World) -> Self::Out {
-        world.last_change_tick_scope(self.system_meta.last_run, |world| {
+        #[cfg(feature = "change_detection")]
+        {
+            world.last_change_tick_scope(self.system_meta.last_run, |world| {
+                let params = F::Param::get_param(
+                    self.param_state.as_mut().expect(PARAM_MESSAGE),
+                    &self.system_meta,
+                );
+                let out = self.func.run(world, input, params);
+
+                world.flush_commands();
+                let change_tick = world.change_tick.get_mut();
+                self.system_meta.last_run.set(*change_tick);
+                *change_tick = change_tick.wrapping_add(1);
+
+                out
+            })
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
             let params = F::Param::get_param(
                 self.param_state.as_mut().expect(PARAM_MESSAGE),
                 &self.system_meta,
@@ -108,12 +127,9 @@ where
             let out = self.func.run(world, input, params);
 
             world.flush_commands();
-            let change_tick = world.change_tick.get_mut();
-            self.system_meta.last_run.set(*change_tick);
-            *change_tick = change_tick.wrapping_add(1);
 
             out
-        })
+        }
     }
 
     #[inline]
@@ -125,12 +141,16 @@ where
 
     #[inline]
     fn initialize(&mut self, world: &mut World) {
-        self.system_meta.last_run = world.change_tick().relative_to(Tick::MAX);
+        #[cfg(feature = "change_detection")]
+        {
+            self.system_meta.last_run = world.change_tick().relative_to(Tick::MAX);
+        }
         self.param_state = Some(F::Param::init(world, &mut self.system_meta));
     }
 
     fn update_archetype_component_access(&mut self, _world: UnsafeWorldCell) {}
 
+    #[cfg(feature = "change_detection")]
     #[inline]
     fn check_change_tick(&mut self, change_tick: Tick) {
         check_system_change_tick(
@@ -145,10 +165,12 @@ where
         vec![set.intern()]
     }
 
+    #[cfg(feature = "change_detection")]
     fn get_last_run(&self) -> Tick {
         self.system_meta.last_run
     }
 
+    #[cfg(feature = "change_detection")]
     fn set_last_run(&mut self, last_run: Tick) {
         self.system_meta.last_run = last_run;
     }

@@ -132,6 +132,7 @@ where
         self.system.update_archetype_component_access(world);
     }
 
+    #[cfg(feature = "change_detection")]
     fn check_change_tick(&mut self, change_tick: crate::component::Tick) {
         self.system.check_change_tick(change_tick);
     }
@@ -140,10 +141,12 @@ where
         self.system.default_system_sets()
     }
 
+    #[cfg(feature = "change_detection")]
     fn get_last_run(&self) -> crate::component::Tick {
         self.system.get_last_run()
     }
 
+    #[cfg(feature = "change_detection")]
     fn set_last_run(&mut self, last_run: crate::component::Tick) {
         self.system.set_last_run(last_run);
     }

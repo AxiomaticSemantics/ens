@@ -81,26 +81,27 @@ taskpool! {
 ///
 /// This function *must* be called on the main thread, or the task pools will not be updated appropriately.
 pub fn tick_global_task_pools_on_main_thread() {
-    COMPUTE_TASK_POOL
-        .get()
-        .unwrap()
-        .with_local_executor(|compute_local_executor| {
-            compute_local_executor.try_tick();
-        });
-    /*            ASYNC_COMPUTE_TASK_POOL
+    /*    COMPUTE_TASK_POOL
             .get()
             .unwrap()
-            .with_local_executor(|async_local_executor| {
-                IO_TASK_POOL
+            .with_local_executor(|compute_executor| {
+                //compute_executor.try_tick();
+                //});
+                ASYNC_COMPUTE_TASK_POOL
                     .get()
                     .unwrap()
-                    .with_local_executor(|io_local_executor| {
-                        for _ in 0..10 {
-                            compute_local_executor.try_tick();
-                            async_local_executor.try_tick();
-                            io_local_executor.try_tick();
-                        }
+                    .with_local_executor(|async_executor| {
+                        IO_TASK_POOL
+                            .get()
+                            .unwrap()
+                            .with_local_executor(|io_executor| {
+                                //for _ in 0..10 {
+                                compute_executor.try_tick();
+                                async_executor.try_tick();
+                                io_executor.try_tick();
+                                //}
+                            });
                     });
             });
-    }); */
+    */
 }

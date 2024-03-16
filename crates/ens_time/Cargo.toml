@@ -10,6 +10,7 @@ keywords = ["bevy"]
 
 [features]
 default = []
+events = ["ens/events", "ens_app/events"]
 serialize = ["serde"]
 
 [dependencies]

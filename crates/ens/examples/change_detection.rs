@@ -6,7 +6,7 @@
 //! To demonstrate change detection, there are some console outputs based on changes in
 //! the `EntityCounter` resource and updated Age components
 
-use bevy_ecs::prelude::*;
+use ens::prelude::*;
 use rand::Rng;
 use std::ops::Deref;
 

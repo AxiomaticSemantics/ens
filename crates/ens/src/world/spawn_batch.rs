@@ -29,18 +29,31 @@ where
         // necessary
         world.flush_entities();
 
-        let change_tick = world.change_tick();
-
         let (lower, upper) = iter.size_hint();
         let length = upper.unwrap_or(lower);
         world.entities.reserve(length as u32);
 
-        let mut spawner = BundleSpawner::new::<I::Item>(world, change_tick);
-        spawner.reserve_storage(length);
+        #[cfg(feature = "change_detection")]
+        {
+            let change_tick = world.change_tick();
+            let mut spawner = BundleSpawner::new::<I::Item>(world, change_tick);
+            spawner.reserve_storage(length);
 
-        Self {
-            inner: iter,
-            spawner,
+            Self {
+                inner: iter,
+                spawner,
+            }
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
+            let mut spawner = BundleSpawner::new::<I::Item>(world);
+            spawner.reserve_storage(length);
+
+            Self {
+                inner: iter,
+                spawner,
+            }
         }
     }
 }

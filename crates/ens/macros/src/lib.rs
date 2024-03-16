@@ -6,6 +6,7 @@ extern crate proc_macro;
 mod component;
 mod query_data;
 mod query_filter;
+#[cfg(feature = "states")]
 mod states;
 mod world_query;
 
@@ -189,7 +190,9 @@ pub fn impl_param_set(_input: TokenStream) -> TokenStream {
                 // Conflicting params in ParamSet are not accessible at the same time
                 // ParamSets are guaranteed to not conflict with other SystemParams
                 unsafe {
-                    #param::get_param(&mut self.param_states.#index, &self.system_meta, self.world, self.change_tick)
+                    #param::get_param(&mut self.param_states.#index, &self.system_meta, self.world,
+                       #[cfg(feature = "change_detection")]
+                        self.change_tick)
                 }
             }
         });
@@ -252,12 +255,14 @@ pub fn impl_param_set(_input: TokenStream) -> TokenStream {
                     state: &'s mut Self::State,
                     system_meta: &SystemMeta,
                     world: UnsafeWorldCell<'w>,
+                    #[cfg(feature = "change_detection")]
                     change_tick: Tick,
                 ) -> Self::Item<'w, 's> {
                     ParamSet {
                         param_states: state,
                         system_meta: system_meta.clone(),
                         world,
+                        #[cfg(feature = "change_detection")]
                         change_tick,
                     }
                 }
@@ -437,11 +442,17 @@ pub fn derive_system_param(input: TokenStream) -> TokenStream {
                     state: &'s mut Self::State,
                     system_meta: &#path::system::SystemMeta,
                     world: #path::world::unsafe_world_cell::UnsafeWorldCell<'w>,
+                    #[cfg(feature = "change_detection")]
                     change_tick: #path::component::Tick,
                 ) -> Self::Item<'w, 's> {
                     let (#(#tuple_patterns,)*) = <
                         (#(#tuple_types,)*) as #path::system::SystemParam
-                    >::get_param(&mut state.state, system_meta, world, change_tick);
+                    >::get_param(
+                        &mut state.state,
+                        system_meta,
+                        world,
+                        #[cfg(feature = "change_detection")] change_tick
+                    );
                     #struct_name {
                         #(#fields: #field_locals,)*
                     }
@@ -500,6 +511,7 @@ pub(crate) fn ens_path() -> syn::Path {
     EnsManifest::default().get_path("ens")
 }
 
+#[cfg(feature = "events")]
 #[proc_macro_derive(Event)]
 pub fn derive_event(input: TokenStream) -> TokenStream {
     component::derive_event(input)
@@ -515,6 +527,7 @@ pub fn derive_component(input: TokenStream) -> TokenStream {
     component::derive_component(input)
 }
 
+#[cfg(feature = "states")]
 #[proc_macro_derive(States)]
 pub fn derive_states(input: TokenStream) -> TokenStream {
     states::derive_states(input)

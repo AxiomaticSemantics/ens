@@ -1,9 +1,10 @@
 use std::hash::{BuildHasher, Hasher};
 
-use ens_utils::hashbrown;
+use ens_utils::{hashbrown, EntityHash, EntityHasher};
 
 use super::Entity;
 
+/*
 /// A [`BuildHasher`] that results in a [`EntityHasher`].
 #[derive(Default, Clone)]
 pub struct EntityHash;
@@ -74,6 +75,7 @@ impl Hasher for EntityHasher {
         self.hash = bits.wrapping_mul(UPPER_PHI);
     }
 }
+*/
 
 /// A [`HashMap`](hashbrown::HashMap) pre-configured to use [`EntityHash`] hashing.
 pub type EntityHashMap<V> = hashbrown::HashMap<Entity, V, EntityHash>;

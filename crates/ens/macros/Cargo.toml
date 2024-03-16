@@ -8,6 +8,11 @@ license = "MIT OR Apache-2.0"
 [lib]
 proc-macro = true
 
+[features]
+change_detection = []
+events = []
+states = []
+
 [dependencies]
 ens_macro_utils = { path = "../../ens_macro_utils", version = "0.14.0-dev" }
 

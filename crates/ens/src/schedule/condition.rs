@@ -196,14 +196,21 @@ mod sealed {
 pub mod common_conditions {
     use super::NotSystem;
     use crate::{
-        change_detection::DetectChanges,
-        event::{Event, EventReader},
+        access::Res,
         prelude::{Component, Query, With},
-        removal_detection::RemovedComponents,
-        schedule::{State, States},
-        system::{IntoSystem, Res, Resource, System},
+        system::{IntoSystem, Resource, System},
     };
 
+    #[cfg(feature = "change_detection")]
+    use crate::change_detection::DetectChanges;
+    #[cfg(feature = "states")]
+    use crate::schedule::{State, States};
+
+    #[cfg(feature = "events")]
+    use crate::{
+        event::{Event, EventReader},
+        removal_detection::RemovedComponents,
+    };
     /// Generates a [`Condition`](super::Condition)-satisfying closure that returns `true`
     /// if the first time the condition is run and false every time after
     ///
@@ -396,6 +403,7 @@ pub mod common_conditions {
     /// app.run(&mut world);
     /// assert_eq!(world.resource::<Counter>().0, 1);
     /// ```
+    #[cfg(feature = "change_detection")]
     pub fn resource_added<T>(res: Option<Res<T>>) -> bool
     where
         T: Resource,
@@ -453,6 +461,7 @@ pub mod common_conditions {
     /// app.run(&mut world);
     /// assert_eq!(world.resource::<Counter>().0, 51);
     /// ```
+    #[cfg(feature = "change_detection")]
     pub fn resource_changed<T>(res: Res<T>) -> bool
     where
         T: Resource,
@@ -510,6 +519,7 @@ pub mod common_conditions {
     /// app.run(&mut world);
     /// assert_eq!(world.resource::<Counter>().0, 51);
     /// ```
+    #[cfg(feature = "change_detection")]
     pub fn resource_exists_and_changed<T>(res: Option<Res<T>>) -> bool
     where
         T: Resource,
@@ -582,6 +592,7 @@ pub mod common_conditions {
     /// app.run(&mut world);
     /// assert_eq!(world.contains_resource::<MyResource>(), true);
     /// ```
+    #[cfg(feature = "change_detection")]
     pub fn resource_changed_or_removed<T>() -> impl FnMut(Option<Res<T>>) -> bool + Clone
     where
         T: Resource,
@@ -694,6 +705,7 @@ pub mod common_conditions {
     /// app.run(&mut world);
     /// assert_eq!(world.resource::<Counter>().0, 1);
     /// ```
+    #[cfg(feature = "states")]
     pub fn state_exists<S: States>(current_state: Option<Res<State<S>>>) -> bool {
         current_state.is_some()
     }
@@ -746,6 +758,7 @@ pub mod common_conditions {
     /// app.run(&mut world);
     /// assert_eq!(world.resource::<Counter>().0, 0);
     /// ```
+    #[cfg(feature = "states")]
     pub fn in_state<S: States>(state: S) -> impl FnMut(Option<Res<State<S>>>) -> bool + Clone {
         move |current_state: Option<Res<State<S>>>| match current_state {
             Some(current_state) => *current_state == state,
@@ -815,6 +828,7 @@ pub mod common_conditions {
     /// app.run(&mut world);
     /// assert_eq!(world.resource::<Counter>().0, 2);
     /// ```
+    #[cfg(feature = "states")]
     pub fn state_changed<S: States>(current_state: Option<Res<State<S>>>) -> bool {
         let Some(current_state) = current_state else {
             return false;
@@ -858,6 +872,7 @@ pub mod common_conditions {
     /// app.run(&mut world);
     /// assert_eq!(world.resource::<Counter>().0, 1);
     /// ```
+    #[cfg(feature = "events")]
     pub fn on_event<T: Event>() -> impl FnMut(EventReader<T>) -> bool + Clone {
         // The events need to be consumed, so that there are no false positives on subsequent
         // calls of the run condition. Simply checking `is_empty` would not be enough.
@@ -905,6 +920,7 @@ pub mod common_conditions {
 
     /// Generates a [`Condition`](super::Condition)-satisfying closure that returns `true`
     /// if there are any entity with a component of the given type removed.
+    #[cfg(feature = "events")]
     pub fn any_component_removed<T: Component>() -> impl FnMut(RemovedComponents<T>) -> bool {
         // `RemovedComponents` based on events and therefore events need to be consumed,
         // so that there are no false positives on subsequent calls of the run condition.
@@ -1028,12 +1044,14 @@ where
 mod tests {
     use super::{common_conditions::*, Condition};
     use crate as ens;
+    use crate::access::ResMut;
     use crate::component::Component;
+    use crate::event::Event;
     use crate::schedule::IntoSystemConfigs;
-    use crate::schedule::{common_conditions::not, State, States};
-    use crate::system::Local;
-    use crate::{change_detection::ResMut, schedule::Schedule, world::World};
-    use ens_macros::{Event, Resource};
+    use crate::schedule::{common_conditions::not, State};
+    use crate::system::{Local, Resource};
+    use crate::{schedule::Schedule, world::World};
+    use ens_macros::States;
 
     #[derive(Resource, Default)]
     struct Counter(usize);

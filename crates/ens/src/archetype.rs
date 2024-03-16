@@ -98,7 +98,7 @@ impl ArchetypeId {
 
     /// The plain value of this `ArchetypeId`.
     ///
-    /// In bevy, this is mostly used to store archetype ids in [`FixedBitSet`]s.
+    /// In `ens`, this is mostly used to store archetype ids in [`FixedBitSet`]s.
     ///
     /// [`FixedBitSet`]: fixedbitset::FixedBitSet
     #[inline]
@@ -340,6 +340,8 @@ impl Archetype {
         for (component_id, archetype_component_id) in table_components {
             // SAFETY: We are creating an archetype that includes this component so it must exist
             let info = unsafe { components.get_info_unchecked(component_id) };
+
+            #[cfg(feature = "component_hooks")]
             info.update_archetype_flags(&mut flags);
             archetype_components.insert(
                 component_id,
@@ -353,6 +355,7 @@ impl Archetype {
         for (component_id, archetype_component_id) in sparse_set_components {
             // SAFETY: We are creating an archetype that includes this component so it must exist
             let info = unsafe { components.get_info_unchecked(component_id) };
+            #[cfg(feature = "component_hooks")]
             info.update_archetype_flags(&mut flags);
             archetype_components.insert(
                 component_id,

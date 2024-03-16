@@ -1,10 +1,13 @@
 use crate::system::{ExclusiveSystemParam, SystemMeta};
 use crate::{
-    component::Tick,
     storage::SparseSetIndex,
     system::{ReadOnlySystemParam, SystemParam},
     world::{FromWorld, World},
 };
+
+#[cfg(feature = "change_detection")]
+use crate::component::Tick;
+
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::unsafe_world_cell::UnsafeWorldCell;
@@ -60,7 +63,7 @@ unsafe impl SystemParam for WorldId {
         _: &'state mut Self::State,
         _: &crate::system::SystemMeta,
         world: UnsafeWorldCell<'world>,
-        _: Tick,
+        #[cfg(feature = "change_detection")] _: Tick,
     ) -> Self::Item<'world, 'state> {
         world.id()
     }

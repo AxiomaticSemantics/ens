@@ -1,10 +1,8 @@
 use crate::{
-    entity::Entity,
+    entity::{hash::EntityHashMap, Entity},
     identifier::masks::{IdentifierMask, HIGH_MASK},
     world::World,
 };
-
-use super::EntityHashMap;
 
 /// Operation to map all contained [`Entity`] fields in a type to new values.
 ///
@@ -21,8 +19,8 @@ use super::EntityHashMap;
 /// ## Example
 ///
 /// ```
-/// use bevy_ecs::prelude::*;
-/// use bevy_ecs::entity::MapEntities;
+/// use ens::prelude::*;
+/// use ens::entity::MapEntities;
 ///
 /// #[derive(Component)]
 /// struct Spring {
@@ -56,8 +54,8 @@ pub trait MapEntities {
 /// ## Example
 ///
 /// ```
-/// # use bevy_ecs::entity::{Entity, EntityMapper};
-/// # use bevy_ecs::entity::EntityHashMap;
+/// # use ens::entity::{Entity, EntityMapper};
+/// # use ens::entity::EntityHashMap;
 /// #
 /// pub struct SimpleEntityMapper {
 ///   map: EntityHashMap<Entity>,
@@ -173,9 +171,11 @@ impl<'m> SceneEntityMapper<'m> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        entity::{Entity, EntityHashMap, EntityMapper, SceneEntityMapper},
+        entity::{Entity, EntityMapper, SceneEntityMapper},
         world::World,
     };
+
+    use ens_utils::EntityHashMap;
 
     #[test]
     fn entity_mapper() {

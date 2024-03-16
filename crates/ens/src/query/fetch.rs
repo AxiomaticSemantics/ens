@@ -1,14 +1,20 @@
 use crate::{
+    access::{Mut, Ref},
     archetype::Archetype,
-    change_detection::{Ticks, TicksMut},
-    component::{Component, ComponentId, StorageType, Tick},
+    component::{Component, ComponentId, StorageType},
     entity::Entity,
     query::{Access, DebugCheckedUnwrap, FilteredAccess, WorldQuery},
     storage::{ComponentSparseSet, Table, TableRow},
     world::{
         unsafe_world_cell::UnsafeWorldCell, EntityMut, EntityRef, FilteredEntityMut,
-        FilteredEntityRef, Mut, Ref, World,
+        FilteredEntityRef, World,
     },
+};
+
+#[cfg(feature = "change_detection")]
+use crate::{
+    change_detection::{Ticks, TicksMut},
+    component::Tick,
 };
 
 use ens_ptr::{ThinSlicePtr, UnsafeCellDeref};
@@ -57,8 +63,8 @@ use std::{cell::UnsafeCell, marker::PhantomData};
 /// This trait can only be derived for structs, if each field also implements `QueryData`.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
-/// use bevy_ecs::query::QueryData;
+/// # use ens::prelude::*;
+/// use ens::query::QueryData;
 /// #
 /// # #[derive(Component)]
 /// # struct ComponentA;
@@ -79,7 +85,7 @@ use std::{cell::UnsafeCell, marker::PhantomData};
 ///         q.component_a;
 ///     }
 /// }
-/// # bevy_ecs::system::assert_is_system(my_system);
+/// # ens::system::assert_is_system(my_system);
 /// ```
 ///
 /// ## Macro expansion
@@ -98,8 +104,8 @@ use std::{cell::UnsafeCell, marker::PhantomData};
 /// Simply adding mutable references to a derived `QueryData` will result in a compilation error:
 ///
 /// ```compile_fail
-/// # use bevy_ecs::prelude::*;
-/// # use bevy_ecs::query::QueryData;
+/// # use ens::prelude::*;
+/// # use ens::query::QueryData;
 /// #
 /// # #[derive(Component)]
 /// # struct ComponentA;
@@ -114,8 +120,8 @@ use std::{cell::UnsafeCell, marker::PhantomData};
 /// This will also create three more structs that will be used for accessing the query immutably (see table above).
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
-/// # use bevy_ecs::query::QueryData;
+/// # use ens::prelude::*;
+/// # use ens::query::QueryData;
 /// #
 /// # #[derive(Component)]
 /// # struct ComponentA;
@@ -134,8 +140,8 @@ use std::{cell::UnsafeCell, marker::PhantomData};
 /// It is done by adding `impl` blocks with methods for the `-Item` or `-ReadOnlyItem` generated structs.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
-/// # use bevy_ecs::query::QueryData;
+/// # use ens::prelude::*;
+/// # use ens::query::QueryData;
 /// #
 /// #[derive(Component)]
 /// struct Health(f32);
@@ -179,7 +185,7 @@ use std::{cell::UnsafeCell, marker::PhantomData};
 ///         println!("Total (mut): {}", health.total());
 ///     }
 /// }
-/// # bevy_ecs::system::assert_is_system(my_system);
+/// # ens::system::assert_is_system(my_system);
 /// ```
 ///
 /// ## Deriving traits for query items
@@ -189,8 +195,8 @@ use std::{cell::UnsafeCell, marker::PhantomData};
 /// This will apply the listed derivable traits to the query item structs.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
-/// # use bevy_ecs::query::QueryData;
+/// # use ens::prelude::*;
+/// # use ens::query::QueryData;
 /// #
 /// # #[derive(Component, Debug)]
 /// # struct ComponentA;
@@ -214,8 +220,8 @@ use std::{cell::UnsafeCell, marker::PhantomData};
 /// This means that a `QueryData` can also be used as a subquery, potentially in multiple places.
 ///
 /// ```
-/// # use bevy_ecs::prelude::*;
-/// # use bevy_ecs::query::QueryData;
+/// # use ens::prelude::*;
+/// # use ens::query::QueryData;
 /// #
 /// # #[derive(Component)]
 /// # struct ComponentA;
@@ -244,7 +250,7 @@ use std::{cell::UnsafeCell, marker::PhantomData};
 /// `PhantomData<T>` types, this pattern can be used with this macro.
 ///
 /// ```
-/// # use bevy_ecs::{prelude::*, query::QueryData};
+/// # use ens::{prelude::*, query::QueryData};
 /// # use std::marker::PhantomData;
 /// #[derive(QueryData)]
 /// pub struct GenericQuery<T> {
@@ -252,7 +258,7 @@ use std::{cell::UnsafeCell, marker::PhantomData};
 ///     marker: PhantomData<T>,
 /// }
 /// # fn my_system(q: Query<GenericQuery<()>>) {}
-/// # bevy_ecs::system::assert_is_system(my_system);
+/// # ens::system::assert_is_system(my_system);
 /// ```
 ///
 /// # Safety
@@ -294,8 +300,8 @@ unsafe impl WorldQuery for Entity {
     unsafe fn init_fetch<'w>(
         _world: UnsafeWorldCell<'w>,
         _state: &Self::State,
-        _last_run: Tick,
-        _this_run: Tick,
+        #[cfg(feature = "change_detection")] _last_run: Tick,
+        #[cfg(feature = "change_detection")] _this_run: Tick,
     ) -> Self::Fetch<'w> {
     }
 
@@ -363,8 +369,8 @@ unsafe impl<'a> WorldQuery for EntityRef<'a> {
     unsafe fn init_fetch<'w>(
         world: UnsafeWorldCell<'w>,
         _state: &Self::State,
-        _last_run: Tick,
-        _this_run: Tick,
+        #[cfg(feature = "change_detection")] _last_run: Tick,
+        #[cfg(feature = "change_detection")] _this_run: Tick,
     ) -> Self::Fetch<'w> {
         world
     }
@@ -439,8 +445,8 @@ unsafe impl<'a> WorldQuery for EntityMut<'a> {
     unsafe fn init_fetch<'w>(
         world: UnsafeWorldCell<'w>,
         _state: &Self::State,
-        _last_run: Tick,
-        _this_run: Tick,
+        #[cfg(feature = "change_detection")] _last_run: Tick,
+        #[cfg(feature = "change_detection")] _this_run: Tick,
     ) -> Self::Fetch<'w> {
         world
     }
@@ -514,8 +520,8 @@ unsafe impl<'a> WorldQuery for FilteredEntityRef<'a> {
     unsafe fn init_fetch<'w>(
         world: UnsafeWorldCell<'w>,
         _state: &Self::State,
-        _last_run: Tick,
-        _this_run: Tick,
+        #[cfg(feature = "change_detection")] _last_run: Tick,
+        #[cfg(feature = "change_detection")] _this_run: Tick,
     ) -> Self::Fetch<'w> {
         let mut access = Access::default();
         access.read_all();
@@ -617,8 +623,8 @@ unsafe impl<'a> WorldQuery for FilteredEntityMut<'a> {
     unsafe fn init_fetch<'w>(
         world: UnsafeWorldCell<'w>,
         _state: &Self::State,
-        _last_run: Tick,
-        _this_run: Tick,
+        #[cfg(feature = "change_detection")] _last_run: Tick,
+        #[cfg(feature = "change_detection")] _this_run: Tick,
     ) -> Self::Fetch<'w> {
         let mut access = Access::default();
         access.write_all();
@@ -744,8 +750,8 @@ unsafe impl<T: Component> WorldQuery for &T {
     unsafe fn init_fetch<'w>(
         world: UnsafeWorldCell<'w>,
         &component_id: &ComponentId,
-        _last_run: Tick,
-        _this_run: Tick,
+        #[cfg(feature = "change_detection")] _last_run: Tick,
+        #[cfg(feature = "change_detection")] _this_run: Tick,
     ) -> ReadFetch<'w, T> {
         ReadFetch {
             table_components: None,
@@ -865,15 +871,21 @@ unsafe impl<T: Component> ReadOnlyQueryData for &T {}
 #[doc(hidden)]
 pub struct RefFetch<'w, T> {
     // T::STORAGE_TYPE = StorageType::Table
+    #[cfg(feature = "change_detection")]
     table_data: Option<(
         ThinSlicePtr<'w, UnsafeCell<T>>,
         ThinSlicePtr<'w, UnsafeCell<Tick>>,
         ThinSlicePtr<'w, UnsafeCell<Tick>>,
     )>,
+    #[cfg(not(feature = "change_detection"))]
+    table_data: Option<ThinSlicePtr<'w, UnsafeCell<T>>>,
+
     // T::STORAGE_TYPE = StorageType::SparseSet
     sparse_set: Option<&'w ComponentSparseSet>,
 
+    #[cfg(feature = "change_detection")]
     last_run: Tick,
+    #[cfg(feature = "change_detection")]
     this_run: Tick,
 }
 
@@ -902,8 +914,8 @@ unsafe impl<'__w, T: Component> WorldQuery for Ref<'__w, T> {
     unsafe fn init_fetch<'w>(
         world: UnsafeWorldCell<'w>,
         &component_id: &ComponentId,
-        last_run: Tick,
-        this_run: Tick,
+        #[cfg(feature = "change_detection")] last_run: Tick,
+        #[cfg(feature = "change_detection")] this_run: Tick,
     ) -> RefFetch<'w, T> {
         RefFetch {
             table_data: None,
@@ -920,7 +932,9 @@ unsafe impl<'__w, T: Component> WorldQuery for Ref<'__w, T> {
                         .debug_checked_unwrap()
                 }
             }),
+            #[cfg(feature = "change_detection")]
             last_run,
+            #[cfg(feature = "change_detection")]
             this_run,
         }
     }
@@ -954,11 +968,19 @@ unsafe impl<'__w, T: Component> WorldQuery for Ref<'__w, T> {
         table: &'w Table,
     ) {
         let column = table.get_column(component_id).debug_checked_unwrap();
-        fetch.table_data = Some((
-            column.get_data_slice().into(),
-            column.get_added_ticks_slice().into(),
-            column.get_changed_ticks_slice().into(),
-        ));
+        #[cfg(feature = "change_detection")]
+        {
+            fetch.table_data = Some((
+                column.get_data_slice().into(),
+                column.get_added_ticks_slice().into(),
+                column.get_changed_ticks_slice().into(),
+            ));
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
+            fetch.table_data = Some(column.get_data_slice().into());
+        }
     }
 
     #[inline(always)]
@@ -969,25 +991,42 @@ unsafe impl<'__w, T: Component> WorldQuery for Ref<'__w, T> {
     ) -> Self::Item<'w> {
         match T::STORAGE_TYPE {
             StorageType::Table => {
-                // SAFETY: STORAGE_TYPE = Table
-                let (table_components, added_ticks, changed_ticks) =
-                    unsafe { fetch.table_data.debug_checked_unwrap() };
+                #[cfg(feature = "change_detection")]
+                {
+                    // SAFETY: STORAGE_TYPE = Table
+                    let (table_components, added_ticks, changed_ticks) =
+                        unsafe { fetch.table_data.debug_checked_unwrap() };
 
-                // SAFETY: The caller ensures `table_row` is in range.
-                let component = unsafe { table_components.get(table_row.as_usize()) };
-                // SAFETY: The caller ensures `table_row` is in range.
-                let added = unsafe { added_ticks.get(table_row.as_usize()) };
-                // SAFETY: The caller ensures `table_row` is in range.
-                let changed = unsafe { changed_ticks.get(table_row.as_usize()) };
+                    // SAFETY: The caller ensures `table_row` is in range.
+                    let component = unsafe { table_components.get(table_row.as_usize()) };
+                    // SAFETY: The caller ensures `table_row` is in range.
+                    #[cfg(feature = "change_detection")]
+                    let added = unsafe { added_ticks.get(table_row.as_usize()) };
+                    // SAFETY: The caller ensures `table_row` is in range.
+                    #[cfg(feature = "change_detection")]
+                    let changed = unsafe { changed_ticks.get(table_row.as_usize()) };
 
-                Ref {
-                    value: component.deref(),
-                    ticks: Ticks {
-                        added: added.deref(),
-                        changed: changed.deref(),
-                        this_run: fetch.this_run,
-                        last_run: fetch.last_run,
-                    },
+                    Ref {
+                        value: component.deref(),
+                        ticks: Ticks {
+                            added: added.deref(),
+                            changed: changed.deref(),
+                            this_run: fetch.this_run,
+                            last_run: fetch.last_run,
+                        },
+                    }
+                }
+
+                #[cfg(not(feature = "change_detection"))]
+                {
+                    let table_components = unsafe { fetch.table_data.debug_checked_unwrap() };
+
+                    // SAFETY: The caller ensures `table_row` is in range.
+                    let component = unsafe { table_components.get(table_row.as_usize()) };
+
+                    Ref {
+                        value: component.deref(),
+                    }
                 }
             }
             StorageType::SparseSet => {
@@ -995,15 +1034,28 @@ unsafe impl<'__w, T: Component> WorldQuery for Ref<'__w, T> {
                 let component_sparse_set = unsafe { fetch.sparse_set.debug_checked_unwrap() };
 
                 // SAFETY: The caller ensures `entity` is in range.
-                let (component, ticks) = unsafe {
-                    component_sparse_set
-                        .get_with_ticks(entity)
-                        .debug_checked_unwrap()
-                };
+                #[cfg(feature = "change_detection")]
+                {
+                    let (component, ticks) = unsafe {
+                        component_sparse_set
+                            .get_with_ticks(entity)
+                            .debug_checked_unwrap()
+                    };
 
-                Ref {
-                    value: component.deref(),
-                    ticks: Ticks::from_tick_cells(ticks, fetch.last_run, fetch.this_run),
+                    Ref {
+                        value: component.deref(),
+                        ticks: Ticks::from_tick_cells(ticks, fetch.last_run, fetch.this_run),
+                    }
+                }
+
+                #[cfg(not(feature = "change_detection"))]
+                {
+                    let component =
+                        unsafe { component_sparse_set.get(entity).debug_checked_unwrap() };
+
+                    Ref {
+                        value: component.deref(),
+                    }
                 }
             }
         }
@@ -1048,15 +1100,20 @@ unsafe impl<'__w, T: Component> ReadOnlyQueryData for Ref<'__w, T> {}
 #[doc(hidden)]
 pub struct WriteFetch<'w, T> {
     // T::STORAGE_TYPE = StorageType::Table
+    #[cfg(feature = "change_detection")]
     table_data: Option<(
         ThinSlicePtr<'w, UnsafeCell<T>>,
         ThinSlicePtr<'w, UnsafeCell<Tick>>,
         ThinSlicePtr<'w, UnsafeCell<Tick>>,
     )>,
+    #[cfg(not(feature = "change_detection"))]
+    table_data: Option<ThinSlicePtr<'w, UnsafeCell<T>>>,
     // T::STORAGE_TYPE = StorageType::SparseSet
     sparse_set: Option<&'w ComponentSparseSet>,
 
+    #[cfg(feature = "change_detection")]
     last_run: Tick,
+    #[cfg(feature = "change_detection")]
     this_run: Tick,
 }
 
@@ -1085,8 +1142,8 @@ unsafe impl<'__w, T: Component> WorldQuery for &'__w mut T {
     unsafe fn init_fetch<'w>(
         world: UnsafeWorldCell<'w>,
         &component_id: &ComponentId,
-        last_run: Tick,
-        this_run: Tick,
+        #[cfg(feature = "change_detection")] last_run: Tick,
+        #[cfg(feature = "change_detection")] this_run: Tick,
     ) -> WriteFetch<'w, T> {
         WriteFetch {
             table_data: None,
@@ -1103,7 +1160,9 @@ unsafe impl<'__w, T: Component> WorldQuery for &'__w mut T {
                         .debug_checked_unwrap()
                 }
             }),
+            #[cfg(feature = "change_detection")]
             last_run,
+            #[cfg(feature = "change_detection")]
             this_run,
         }
     }
@@ -1137,11 +1196,19 @@ unsafe impl<'__w, T: Component> WorldQuery for &'__w mut T {
         table: &'w Table,
     ) {
         let column = table.get_column(component_id).debug_checked_unwrap();
-        fetch.table_data = Some((
-            column.get_data_slice().into(),
-            column.get_added_ticks_slice().into(),
-            column.get_changed_ticks_slice().into(),
-        ));
+        #[cfg(feature = "change_detection")]
+        {
+            fetch.table_data = Some((
+                column.get_data_slice().into(),
+                column.get_added_ticks_slice().into(),
+                column.get_changed_ticks_slice().into(),
+            ));
+        }
+
+        #[cfg(not(feature = "change_detection"))]
+        {
+            fetch.table_data = Some(column.get_data_slice().into());
+        }
     }
 
     #[inline(always)]
@@ -1152,41 +1219,75 @@ unsafe impl<'__w, T: Component> WorldQuery for &'__w mut T {
     ) -> Self::Item<'w> {
         match T::STORAGE_TYPE {
             StorageType::Table => {
-                // SAFETY: STORAGE_TYPE = Table
-                let (table_components, added_ticks, changed_ticks) =
-                    unsafe { fetch.table_data.debug_checked_unwrap() };
+                #[cfg(feature = "change_detection")]
+                {
+                    // SAFETY: STORAGE_TYPE = Table
+                    let (table_components, added_ticks, changed_ticks) =
+                        unsafe { fetch.table_data.debug_checked_unwrap() };
 
-                // SAFETY: The caller ensures `table_row` is in range.
-                let component = unsafe { table_components.get(table_row.as_usize()) };
-                // SAFETY: The caller ensures `table_row` is in range.
-                let added = unsafe { added_ticks.get(table_row.as_usize()) };
-                // SAFETY: The caller ensures `table_row` is in range.
-                let changed = unsafe { changed_ticks.get(table_row.as_usize()) };
+                    // SAFETY: The caller ensures `table_row` is in range.
+                    let component = unsafe { table_components.get(table_row.as_usize()) };
+                    // SAFETY: The caller ensures `table_row` is in range.
+                    let added = unsafe { added_ticks.get(table_row.as_usize()) };
+                    // SAFETY: The caller ensures `table_row` is in range.
+                    let changed = unsafe { changed_ticks.get(table_row.as_usize()) };
 
-                Mut {
-                    value: component.deref_mut(),
-                    ticks: TicksMut {
-                        added: added.deref_mut(),
-                        changed: changed.deref_mut(),
-                        this_run: fetch.this_run,
-                        last_run: fetch.last_run,
-                    },
+                    Mut {
+                        value: component.deref_mut(),
+                        #[cfg(feature = "change_detection")]
+                        ticks: TicksMut {
+                            added: added.deref_mut(),
+                            changed: changed.deref_mut(),
+                            this_run: fetch.this_run,
+                            last_run: fetch.last_run,
+                        },
+                    }
+                }
+
+                #[cfg(not(feature = "change_detection"))]
+                {
+                    // SAFETY: STORAGE_TYPE = Table
+                    let table_components = unsafe { fetch.table_data.debug_checked_unwrap() };
+
+                    // SAFETY: The caller ensures `table_row` is in range.
+                    let component = unsafe { table_components.get(table_row.as_usize()) };
+
+                    Mut {
+                        value: component.deref_mut(),
+                    }
                 }
             }
             StorageType::SparseSet => {
                 // SAFETY: STORAGE_TYPE = SparseSet
                 let component_sparse_set = unsafe { fetch.sparse_set.debug_checked_unwrap() };
 
-                // SAFETY: The caller ensures `entity` is in range.
-                let (component, ticks) = unsafe {
-                    component_sparse_set
-                        .get_with_ticks(entity)
-                        .debug_checked_unwrap()
-                };
+                #[cfg(feature = "change_detection")]
+                {
+                    // SAFETY: The caller ensures `entity` is in range.
+                    // FIXME
+                    // need to work this out when change detection is disabled - ebola
+                    let (component, ticks) = unsafe {
+                        component_sparse_set
+                            .get_with_ticks(entity)
+                            .debug_checked_unwrap()
+                    };
 
-                Mut {
-                    value: component.assert_unique().deref_mut(),
-                    ticks: TicksMut::from_tick_cells(ticks, fetch.last_run, fetch.this_run),
+                    Mut {
+                        value: component.assert_unique().deref_mut(),
+                        #[cfg(feature = "change_detection")]
+                        ticks: TicksMut::from_tick_cells(ticks, fetch.last_run, fetch.this_run),
+                    }
+                }
+
+                #[cfg(not(feature = "change_detection"))]
+                {
+                    // SAFETY: The caller ensures `entity` is in range.
+                    let component =
+                        unsafe { component_sparse_set.get(entity).debug_checked_unwrap() };
+
+                    Mut {
+                        value: component.assert_unique().deref_mut(),
+                    }
                 }
             }
         }
@@ -1257,12 +1358,21 @@ unsafe impl<T: WorldQuery> WorldQuery for Option<T> {
     unsafe fn init_fetch<'w>(
         world: UnsafeWorldCell<'w>,
         state: &T::State,
-        last_run: Tick,
-        this_run: Tick,
+        #[cfg(feature = "change_detection")] last_run: Tick,
+        #[cfg(feature = "change_detection")] this_run: Tick,
     ) -> OptionFetch<'w, T> {
         OptionFetch {
             // SAFETY: The invariants are uphold by the caller.
-            fetch: unsafe { T::init_fetch(world, state, last_run, this_run) },
+            fetch: unsafe {
+                T::init_fetch(
+                    world,
+                    state,
+                    #[cfg(feature = "change_detection")]
+                    last_run,
+                    #[cfg(feature = "change_detection")]
+                    this_run,
+                )
+            },
             matches: false,
         }
     }
@@ -1365,10 +1475,10 @@ unsafe impl<T: ReadOnlyQueryData> ReadOnlyQueryData for Option<T> {}
 /// # Examples
 ///
 /// ```
-/// # use bevy_ecs::component::Component;
-/// # use bevy_ecs::query::Has;
-/// # use bevy_ecs::system::IntoSystem;
-/// # use bevy_ecs::system::Query;
+/// # use ens::component::Component;
+/// # use ens::query::Has;
+/// # use ens::system::IntoSystem;
+/// # use ens::system::Query;
 /// #
 /// # #[derive(Component)]
 /// # struct IsHungry;
@@ -1384,14 +1494,14 @@ unsafe impl<T: ReadOnlyQueryData> ReadOnlyQueryData for Option<T> {}
 ///         }
 ///     }
 /// }
-/// # bevy_ecs::system::assert_is_system(food_entity_system);
+/// # ens::system::assert_is_system(food_entity_system);
 /// ```
 ///
 /// ```
-/// # use bevy_ecs::component::Component;
-/// # use bevy_ecs::query::Has;
-/// # use bevy_ecs::system::IntoSystem;
-/// # use bevy_ecs::system::Query;
+/// # use ens::component::Component;
+/// # use ens::query::Has;
+/// # use ens::system::IntoSystem;
+/// # use ens::system::Query;
 /// #
 /// # #[derive(Component)]
 /// # struct Alpha{has_beta: bool};
@@ -1408,7 +1518,7 @@ unsafe impl<T: ReadOnlyQueryData> ReadOnlyQueryData for Option<T> {}
 ///         beta.has_alpha = has_alpha;
 ///     }
 /// }
-/// # bevy_ecs::system::assert_is_system(alphabet_entity_system);
+/// # ens::system::assert_is_system(alphabet_entity_system);
 /// ```
 pub struct Has<T>(PhantomData<T>);
 
@@ -1428,8 +1538,8 @@ unsafe impl<T: Component> WorldQuery for Has<T> {
     unsafe fn init_fetch<'w>(
         _world: UnsafeWorldCell<'w>,
         _state: &Self::State,
-        _last_run: Tick,
-        _this_run: Tick,
+        #[cfg(feature = "change_detection")] _last_run: Tick,
+        #[cfg(feature = "change_detection")] _this_run: Tick,
     ) -> Self::Fetch<'w> {
         false
     }
@@ -1544,10 +1654,17 @@ macro_rules! impl_anytuple_fetch {
 
             #[inline]
             #[allow(clippy::unused_unit)]
-            unsafe fn init_fetch<'w>(_world: UnsafeWorldCell<'w>, state: &Self::State, _last_run: Tick, _this_run: Tick) -> Self::Fetch<'w> {
+            unsafe fn init_fetch<'w>(_world: UnsafeWorldCell<'w>, state: &Self::State,
+                #[cfg(feature = "change_detection")] _last_run: Tick,
+                #[cfg(feature = "change_detection")] _this_run: Tick) -> Self::Fetch<'w> {
                 let ($($name,)*) = state;
                  // SAFETY: The invariants are uphold by the caller.
-                ($(( unsafe { $name::init_fetch(_world, $name, _last_run, _this_run) }, false),)*)
+                ($(( unsafe { $name::init_fetch(
+                    _world,
+                    $name,
+                    #[cfg(feature = "change_detection")] _last_run,
+                    #[cfg(feature = "change_detection")] _this_run
+                ) }, false),)*)
             }
 
             const IS_DENSE: bool = true $(&& $name::IS_DENSE)*;
@@ -1649,7 +1766,7 @@ all_tuples!(impl_anytuple_fetch, 0, 15, F, S);
 
 /// [`WorldQuery`] used to nullify queries by turning `Query<D>` into `Query<NopWorldQuery<D>>`
 ///
-/// This will rarely be useful to consumers of `bevy_ecs`.
+/// This will rarely be useful to consumers of `ens`.
 pub struct NopWorldQuery<D: QueryData>(PhantomData<D>);
 
 /// SAFETY:
@@ -1666,8 +1783,8 @@ unsafe impl<D: QueryData> WorldQuery for NopWorldQuery<D> {
     unsafe fn init_fetch(
         _world: UnsafeWorldCell,
         _state: &D::State,
-        _last_run: Tick,
-        _this_run: Tick,
+        #[cfg(feature = "change_detection")] _last_run: Tick,
+        #[cfg(feature = "change_detection")] _this_run: Tick,
     ) {
     }
 
@@ -1733,8 +1850,8 @@ unsafe impl<T: ?Sized> WorldQuery for PhantomData<T> {
     unsafe fn init_fetch<'w>(
         _world: UnsafeWorldCell<'w>,
         _state: &Self::State,
-        _last_run: Tick,
-        _this_run: Tick,
+        #[cfg(feature = "change_detection")] _last_run: Tick,
+        #[cfg(feature = "change_detection")] _this_run: Tick,
     ) -> Self::Fetch<'w> {
     }
 
