@@ -1,6 +1,4 @@
-#[cfg(feature = "reflect")]
-use bevy_ecs::reflect::{ReflectComponent, ReflectMapEntities};
-use bevy_ecs::{
+use ens::{
     component::Component,
     entity::{Entity, EntityMapper, MapEntities},
     world::{FromWorld, World},
@@ -17,12 +15,10 @@ use std::ops::Deref;
 /// See [`HierarchyQueryExt`] for hierarchy related methods on [`Query`].
 ///
 /// [`HierarchyQueryExt`]: crate::query_extension::HierarchyQueryExt
-/// [`Query`]: bevy_ecs::system::Query
+/// [`Query`]: ens::system::Query
 /// [`Children`]: super::children::Children
 /// [`BuildChildren::with_children`]: crate::child_builder::BuildChildren::with_children
 #[derive(Component, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
-#[cfg_attr(feature = "reflect", reflect(Component, MapEntities, PartialEq))]
 pub struct Parent(pub(crate) Entity);
 
 impl Parent {
@@ -44,10 +40,6 @@ impl Parent {
     }
 }
 
-// TODO: We need to impl either FromWorld or Default so Parent can be registered as Reflect.
-// This is because Reflect deserialize by creating an instance and apply a patch on top.
-// However Parent should only ever be set with a real user-defined entity.  Its worth looking into
-// better ways to handle cases like this.
 impl FromWorld for Parent {
     #[inline(always)]
     fn from_world(_world: &mut World) -> Self {

@@ -14,7 +14,7 @@ ens_app = ["dep:ens_app", "ens_core/entity_name"]
 
 [dependencies]
 # ens
-ens = { path = "../ens", version = "0.14.0-dev", features = ["entity_mapper"], default-features = false }
+ens = { path = "../ens", version = "0.14.0-dev", default-features = false }
 ens_app = { path = "../ens_app", version = "0.14.0-dev", optional = true }
 ens_core = { path = "../ens_core", version = "0.14.0-dev", optional = true }
 

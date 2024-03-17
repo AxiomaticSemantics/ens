@@ -10,6 +10,7 @@ keywords = ["bevy"]
 
 [features]
 hash = []
+parallel = []
 default = []
 
 [dependencies]

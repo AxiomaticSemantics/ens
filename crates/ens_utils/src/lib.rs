@@ -25,7 +25,7 @@ pub mod syncunsafecell;
 mod cow_arc;
 mod default;
 pub mod intern;
-#[cfg(feature = "parallel_queue")]
+#[cfg(feature = "parallel")]
 mod parallel_queue;
 
 //pub use ahash::{AHasher, RandomState};
@@ -34,8 +34,7 @@ pub use cow_arc::*;
 pub use default::default;
 pub use ens_utils_proc_macros::*;
 pub use hash::*;
-//pub use hashbrown;
-#[cfg(feature = "parallel_queue")]
+#[cfg(feature = "parallel")]
 pub use parallel_queue::*;
 
 use std::{future::Future, mem::ManuallyDrop, pin::Pin};

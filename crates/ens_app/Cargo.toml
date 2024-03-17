@@ -11,11 +11,10 @@ keywords = ["bevy"]
 [features]
 events = ["ens/events"]
 states = ["ens/states"]
-derive = ["ens_derive"]
+derive = ["ens/derive_macros", "ens_derive"]
 startup = []
 loop_wait = []
-sub_app = []
-default = []
+default = ["derive"]
 
 [dependencies]
 # bevy

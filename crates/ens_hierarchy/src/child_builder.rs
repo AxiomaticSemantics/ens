@@ -1,5 +1,5 @@
 use crate::{Children, HierarchyEvent, Parent};
-use bevy_ecs::{
+use ens::{
     bundle::Bundle,
     entity::Entity,
     prelude::Events,

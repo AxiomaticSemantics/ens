@@ -82,7 +82,7 @@ unsafe impl SystemParam for SystemName<'_> {
     unsafe fn get_param<'w, 's>(
         name: &'s mut Self::State,
         _system_meta: &SystemMeta,
-        world: UnsafeWorldCell<'w>,
+        _world: UnsafeWorldCell<'w>,
         #[cfg(feature = "change_detection")] _change_tick: Tick,
     ) -> Self::Item<'w, 's> {
         SystemName(name)

@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use bevy_ecs::{
+use ens::{
     entity::Entity,
     query::{QueryData, QueryFilter, WorldQuery},
     system::Query,
@@ -18,8 +18,8 @@ pub trait HierarchyQueryExt<'w, 's, D: QueryData, F: QueryFilter> {
     ///
     /// # Examples
     /// ```
-    /// # use bevy_ecs::prelude::*;
-    /// # use bevy_hierarchy::prelude::*;
+    /// # use ens::prelude::*;
+    /// # use ens_hierarchy::prelude::*;
     /// # #[derive(Component)]
     /// # struct Marker;
     /// fn system(query: Query<Entity, With<Marker>>, children_query: Query<&Children>) {
@@ -28,7 +28,7 @@ pub trait HierarchyQueryExt<'w, 's, D: QueryData, F: QueryFilter> {
     ///         // Do something!
     ///     }
     /// }
-    /// # bevy_ecs::system::assert_is_system(system);
+    /// # ens::system::assert_is_system(system);
     /// ```
     fn iter_descendants(&'w self, entity: Entity) -> DescendantIter<'w, 's, D, F>
     where
@@ -40,8 +40,8 @@ pub trait HierarchyQueryExt<'w, 's, D: QueryData, F: QueryFilter> {
     ///
     /// # Examples
     /// ```
-    /// # use bevy_ecs::prelude::*;
-    /// # use bevy_hierarchy::prelude::*;
+    /// # use ens::prelude::*;
+    /// # use ens_hierarchy::prelude::*;
     /// # #[derive(Component)]
     /// # struct Marker;
     /// fn system(query: Query<Entity, With<Marker>>, parent_query: Query<&Parent>) {
@@ -50,7 +50,7 @@ pub trait HierarchyQueryExt<'w, 's, D: QueryData, F: QueryFilter> {
     ///         // Do something!
     ///     }
     /// }
-    /// # bevy_ecs::system::assert_is_system(system);
+    /// # ens::system::assert_is_system(system);
     /// ```
     fn iter_ancestors(&'w self, entity: Entity) -> AncestorIter<'w, 's, D, F>
     where
@@ -155,7 +155,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use bevy_ecs::{
+    use ens::{
         prelude::Component,
         system::{Query, SystemState},
         world::World,

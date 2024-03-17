@@ -33,5 +33,5 @@ pub mod prelude {
     pub use crate::main_schedule::{PostStartup, PreStartup, Startup};
 
     #[cfg(feature = "states")]
-    pub use crate::main_echedule::StateTransition;
+    pub use crate::main_schedule::StateTransition;
 }

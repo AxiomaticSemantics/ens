@@ -1,6 +1,6 @@
 #![allow(clippy::single_component_path_imports)]
 
-//! Forces dynamic linking of Bevy.
+//! Forces dynamic linking of Ens.
 //!
 //! Dynamic linking causes Bevy to be built and linked as a dynamic library. This will make
 //! incremental builds compile much faster.
@@ -32,7 +32,7 @@
 //!
 //! ## The manual way
 //!
-//! Manually enabling dynamic linking is achieved by adding `bevy_dylib` as a dependency and
+//! Manually enabling dynamic linking is achieved by adding `ens_dylib` as a dependency and
 //! adding the following code to the `main.rs` file:
 //!
 //! ```
@@ -48,7 +48,3 @@
 //! #[cfg(debug_assertions)] // new
 //! use ens_dylib;
 //! ```
-
-// Force linking of the main ens crate
-#[allow(unused_imports)]
-use ens_internal;

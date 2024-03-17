@@ -1,12 +1,10 @@
-#[cfg(feature = "reflect")]
-use bevy_ecs::reflect::{ReflectComponent, ReflectMapEntities};
-use bevy_ecs::{
+use core::slice;
+use ens::{
     component::Component,
     entity::{Entity, EntityMapper, MapEntities},
     prelude::FromWorld,
     world::World,
 };
-use core::slice;
 use smallvec::SmallVec;
 use std::ops::Deref;
 
@@ -20,12 +18,10 @@ use std::ops::Deref;
 /// See [`HierarchyQueryExt`] for hierarchy related methods on [`Query`].
 ///
 /// [`HierarchyQueryExt`]: crate::query_extension::HierarchyQueryExt
-/// [`Query`]: bevy_ecs::system::Query
+/// [`Query`]: ens::system::Query
 /// [`Parent`]: crate::components::parent::Parent
 /// [`BuildChildren::with_children`]: crate::child_builder::BuildChildren::with_children
 #[derive(Component, Debug)]
-#[cfg_attr(feature = "reflect", derive(bevy_reflect::Reflect))]
-#[cfg_attr(feature = "reflect", reflect(Component, MapEntities))]
 pub struct Children(pub(crate) SmallVec<[Entity; 8]>);
 
 impl MapEntities for Children {

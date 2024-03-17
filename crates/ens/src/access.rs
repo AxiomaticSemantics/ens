@@ -621,13 +621,13 @@ mod tests {
     use crate::{
         self as ens,
         access::{Mut, MutUntyped, NonSendMut, Ref, ResMut},
-        change_detection::{TicksMut, CHECK_TICK_THRESHOLD, MAX_CHANGE_AGE},
+        change_detection::{
+            DetectChanges, DetectChangesMut, TicksMut, CHECK_TICK_THRESHOLD, MAX_CHANGE_AGE,
+        },
         component::{Component, ComponentTicks, Tick},
         system::{IntoSystem, Query, System},
         world::World,
     };
-
-    use super::{DetectChanges, DetectChangesMut};
 
     #[derive(Component, PartialEq)]
     struct C;

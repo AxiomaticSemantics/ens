@@ -28,15 +28,15 @@ use crate as ens;
 /// Borrowed data used by the [`MultiThreadedExecutor`].
 struct Environment<'env, 'sys> {
     executor: &'env MultiThreadedExecutor,
-    systems: &'sys [SyncUnsafeCell<BoxedSystem>],
+    systems: &'sys [SyncUnsafeCell<BoxedSystem>], 
+    #[cfg(feature = "run_conditions")]
     conditions: Mutex<Conditions<'sys>>,
     world_cell: UnsafeWorldCell<'env>,
 }
  
+#[cfg(feature = "run_conditions")]
 struct Conditions<'a> {
-    #[cfg(feature = "run_conditions")]
     system_conditions: &'a mut [Vec<BoxedCondition>],
-    #[cfg(feature = "run_conditions")]
     set_conditions: &'a mut [Vec<BoxedCondition>],
     sets_with_conditions_of_systems: &'a [FixedBitSet],
     systems_in_sets_with_conditions: &'a [FixedBitSet],
@@ -51,6 +51,7 @@ impl<'env, 'sys> Environment<'env, 'sys> {
         Environment {
             executor,
             systems: SyncUnsafeCell::from_mut(schedule.systems.as_mut_slice()).as_slice_of_cells(),
+            #[cfg(feature = "run_conditions")]
             conditions: Mutex::new(Conditions {
                 #[cfg(feature = "run_conditions")]
                 system_conditions: &mut schedule.system_conditions,
@@ -363,6 +364,7 @@ impl ExecutorState {
             return;
         }
 
+        #[cfg(feature = "run_conditions")]
         let mut conditions = context
             .environment
             .conditions
@@ -390,7 +392,7 @@ impl ExecutorState {
                 if !self.can_run(
                     system_index,
                     system,
-                    &mut conditions,
+                    #[cfg(feature = "run_conditions")] &mut conditions,
                     context.environment.world_cell,
                 ) {
                     // NOTE: exclusive systems with ambiguities are susceptible to
@@ -409,7 +411,7 @@ impl ExecutorState {
                     !self.should_run(
                         system_index,
                         system,
-                        &mut conditions,
+                        #[cfg(feature = "run_conditions")] &mut conditions,
                         context.environment.world_cell,
                     )
                 } {
@@ -450,6 +452,7 @@ impl ExecutorState {
         &mut self,
         system_index: usize,
         system: &mut BoxedSystem,
+        #[cfg(feature = "run_conditions")]
         conditions: &mut Conditions,
         world: UnsafeWorldCell,
     ) -> bool {
@@ -518,10 +521,13 @@ impl ExecutorState {
         &mut self,
         system_index: usize,
         _system: &BoxedSystem,
+        #[cfg(feature = "run_conditions")]
         conditions: &mut Conditions,
         world: UnsafeWorldCell,
     ) -> bool {
         let mut should_run = !self.skipped_systems.contains(system_index);
+        
+        #[cfg(feature = "run_conditions")]
         for set_idx in conditions.sets_with_conditions_of_systems[system_index].ones() {
             if self.evaluated_sets.contains(set_idx) {
                 continue;
@@ -532,22 +538,17 @@ impl ExecutorState {
             // - The caller ensures that `world` has permission to read any data
             //   required by the conditions.
             // - `update_archetype_component_access` has been called for each run condition.
-            #[cfg(feature = "run_conditions")] {
-                let set_conditions_met = unsafe {
-                    evaluate_and_fold_conditions(&mut conditions.set_conditions[set_idx], world)
-                };
+            let set_conditions_met = unsafe {
+                evaluate_and_fold_conditions(&mut conditions.set_conditions[set_idx], world)
+            };
 
-                if !set_conditions_met {
-                    self.skipped_systems
-                        .union_with(&conditions.systems_in_sets_with_conditions[set_idx]);
-                }
-
-                should_run &= set_conditions_met;
+            if !set_conditions_met {
+                self.skipped_systems
+                    .union_with(&conditions.systems_in_sets_with_conditions[set_idx]);
             }
 
-            #[cfg(not(feature = "run_conditions"))] {
-                should_run &= true;
-            }
+            should_run &= set_conditions_met;
+        
 
             self.evaluated_sets.insert(set_idx);
         }

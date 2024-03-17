@@ -6,15 +6,11 @@ use crate::PreUpdate;
 #[cfg(feature = "states")]
 use crate::StateTransition;
 
-#[cfg(feature = "sub_app")]
-use ens::schedule::{common_conditions::run_once as run_once_condition, run_enter_schedule};
 use ens::{
     prelude::*,
     schedule::{InternedScheduleLabel, ScheduleBuildSettings, ScheduleLabel},
 };
 
-#[cfg(feature = "derive")]
-pub use ens_derive::AppLabel;
 use ens_utils::{intern::Interned, label::DynEq, HashMap, HashSet};
 
 use std::{
@@ -59,7 +55,6 @@ pub struct App {
     /// The main ECS [`World`] of the [`App`].
     /// This stores and provides access to all the main data of the application.
     /// The systems of the [`App`] will run using this [`World`].
-    /// If additional separate [`World`]-[`Schedule`] pairs are needed, you can use [`sub_app`](App::insert_sub_app)s.
     pub world: World,
     /// The [runner function](Self::set_runner) is primarily responsible for managing
     /// the application's event loop and advancing the [`Schedule`].
@@ -72,9 +67,6 @@ pub struct App {
     ///
     /// This is initially set to [`Main`].
     pub main_schedule_label: InternedScheduleLabel,
-
-    #[cfg(feature = "sub_app")]
-    sub_apps: HashMap<InternedAppLabel, SubApp>,
     plugin_registry: Vec<Box<dyn Plugin>>,
     plugin_name_added: HashSet<Box<str>>,
     /// A private counter to prevent incorrect calls to `App::run()` from `Plugin::build()`
@@ -85,101 +77,6 @@ pub struct App {
 impl Debug for App {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "App {{ ")?;
-
-        #[cfg(feature = "sub_app")]
-        {
-            write!(f, "sub_apps: ")?;
-            f.debug_map().entries(self.sub_apps.iter()).finish()?;
-        }
-        write!(f, "}}")
-    }
-}
-
-#[cfg(feature = "sub_app")]
-/// A [`SubApp`] contains its own [`Schedule`] and [`World`] separate from the main [`App`].
-/// This is useful for situations where data and data processing should be kept completely separate
-/// from the main application.
-///
-/// # Example
-///
-/// ```
-/// # use ens_app::{App, AppLabel, SubApp, Main};
-/// # use ens::prelude::*;
-/// # use ens::schedule::ScheduleLabel;
-///
-/// #[derive(Resource, Default)]
-/// struct Val(pub i32);
-///
-/// #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, AppLabel)]
-/// struct ExampleApp;
-///
-/// let mut app = App::new();
-///
-/// // initialize the main app with a value of 0;
-/// app.insert_resource(Val(10));
-///
-/// // create a app with a resource and a single schedule
-/// let mut sub_app = App::empty();
-/// // add an outer schedule that runs the main schedule
-/// sub_app.insert_resource(Val(100));
-///
-/// // initialize main schedule
-/// sub_app.add_systems(Main, |counter: Res<Val>| {
-///     // since we assigned the value from the main world in extract
-///     // we see that value instead of 100
-///     assert_eq!(counter.0, 10);
-/// });
-///
-/// // add the sub_app to the app
-/// app.insert_sub_app(ExampleApp, SubApp::new(sub_app, |main_world, sub_app| {
-///     // extract the value from the main app to the sub app
-///     sub_app.world.resource_mut::<Val>().0 = main_world.resource::<Val>().0;
-/// }));
-///
-/// // This will run the schedules once, since we're using the default runner
-/// app.run();
-/// ```
-pub struct SubApp {
-    /// The [`SubApp`]'s instance of [`App`]
-    pub app: App,
-
-    /// A function that allows access to both the main [`App`] [`World`] and the [`SubApp`]. This is
-    /// useful for moving data between the sub app and the main app.
-    extract: Box<dyn Fn(&mut World, &mut App) + Send>,
-}
-
-#[cfg(feature = "sub_app")]
-impl SubApp {
-    /// Creates a new [`SubApp`].
-    ///
-    /// The provided function `extract` is normally called by the [`update`](App::update) method.
-    /// After extract is called, the [`Schedule`] of the sub app is run. The [`World`]
-    /// parameter represents the main app world, while the [`App`] parameter is just a mutable
-    /// reference to the `SubApp` itself.
-    pub fn new(app: App, extract: impl Fn(&mut World, &mut App) + Send + 'static) -> Self {
-        Self {
-            app,
-            extract: Box::new(extract),
-        }
-    }
-
-    /// Runs the [`SubApp`]'s default schedule.
-    pub fn run(&mut self) {
-        self.app.world.run_schedule(self.app.main_schedule_label);
-        self.app.world.clear_trackers();
-    }
-
-    /// Extracts data from main world to this sub-app.
-    pub fn extract(&mut self, main_world: &mut World) {
-        (self.extract)(main_world, &mut self.app);
-    }
-}
-
-#[cfg(feature = "sub_app")]
-impl Debug for SubApp {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "SubApp {{ app: ")?;
-        f.debug_map().entries(self.app.sub_apps.iter()).finish()?;
         write!(f, "}}")
     }
 }
@@ -232,8 +129,6 @@ impl App {
         Self {
             world,
             runner: Box::new(run_once),
-            #[cfg(feature = "sub_app")]
-            sub_apps: HashMap::default(),
             plugin_registry: Vec::default(),
             plugin_name_added: Default::default(),
             main_schedule_label: Main.intern(),
@@ -243,9 +138,6 @@ impl App {
     }
 
     /// Advances the execution of the [`Schedule`] by one cycle.
-    ///
-    /// This method also updates sub apps.
-    /// See [`insert_sub_app`](Self::insert_sub_app) for more details.
     ///
     /// The schedule run by this method is determined by the [`main_schedule_label`](App) field.
     /// By default this is [`Main`].
@@ -257,15 +149,7 @@ impl App {
     pub fn update(&mut self) {
         self.world.run_schedule(self.main_schedule_label);
 
-        #[cfg(feature = "sub_app")]
-        for (_label, sub_app) in &mut self.sub_apps {
-            #[cfg(feature = "trace")]
-            let _sub_app_span = info_span!("sub app", name = ?_label).entered();
-            sub_app.extract(&mut self.world);
-            sub_app.run();
-        }
-
-        //self.world.clear_trackers();
+        self.world.clear_trackers();
     }
 
     /// Starts the application by calling the app's [runner function](Self::set_runner).
@@ -746,64 +630,6 @@ impl App {
         self
     }
 
-    /// Retrieves a `SubApp` stored inside this [`App`].
-    ///
-    /// # Panics
-    ///
-    /// Panics if the `SubApp` doesn't exist.
-    #[cfg(feature = "sub_app")]
-    pub fn sub_app_mut(&mut self, label: impl AppLabel) -> &mut App {
-        match self.get_sub_app_mut(label) {
-            Ok(app) => app,
-            Err(label) => panic!("Sub-App with label '{:?}' does not exist", label),
-        }
-    }
-
-    /// Retrieves a `SubApp` inside this [`App`] with the given label, if it exists. Otherwise returns
-    /// an [`Err`] containing the given label.
-    #[cfg(feature = "sub_app")]
-    pub fn get_sub_app_mut(&mut self, label: impl AppLabel) -> Result<&mut App, impl AppLabel> {
-        self.sub_apps
-            .get_mut(&label.intern())
-            .map(|sub_app| &mut sub_app.app)
-            .ok_or(label)
-    }
-
-    /// Retrieves a `SubApp` stored inside this [`App`].
-    ///
-    /// # Panics
-    ///
-    /// Panics if the `SubApp` doesn't exist.
-    #[cfg(feature = "sub_app")]
-    pub fn sub_app(&self, label: impl AppLabel) -> &App {
-        match self.get_sub_app(label) {
-            Ok(app) => app,
-            Err(label) => panic!("Sub-App with label '{:?}' does not exist", label),
-        }
-    }
-
-    /// Inserts an existing sub app into the app
-    #[cfg(feature = "sub_app")]
-    pub fn insert_sub_app(&mut self, label: impl AppLabel, sub_app: SubApp) {
-        self.sub_apps.insert(label.intern(), sub_app);
-    }
-
-    /// Removes a sub app from the app. Returns [`None`] if the label doesn't exist.
-    #[cfg(feature = "sub_app")]
-    pub fn remove_sub_app(&mut self, label: impl AppLabel) -> Option<SubApp> {
-        self.sub_apps.remove(&label.intern())
-    }
-
-    /// Retrieves a `SubApp` inside this [`App`] with the given label, if it exists. Otherwise returns
-    /// an [`Err`] containing the given label.
-    #[cfg(feature = "sub_app")]
-    pub fn get_sub_app(&self, label: impl AppLabel) -> Result<&App, impl AppLabel> {
-        self.sub_apps
-            .get(&label.intern())
-            .map(|sub_app| &sub_app.app)
-            .ok_or(label)
-    }
-
     /// Adds a new `schedule` to the [`App`].
     ///
     /// # Warning
@@ -1116,8 +942,8 @@ mod tests {
     /// fix: <https://github.com/bevyengine/bevy/pull/10389>
     #[test]
     fn regression_test_10385() {
-        use super::{Res, Resource};
         use crate::PreUpdate;
+        use ens::{access::Res, system::Resource};
 
         #[derive(Resource)]
         struct MyState {}

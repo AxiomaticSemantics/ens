@@ -1,10 +1,10 @@
 use std::marker::PhantomData;
 
-#[cfg(feature = "bevy_app")]
+#[cfg(feature = "ens_app")]
 use crate::Parent;
-use bevy_ecs::prelude::*;
-#[cfg(feature = "bevy_app")]
-use bevy_utils::{get_short_name, HashSet};
+use ens::prelude::*;
+#[cfg(feature = "ens_app")]
+use ens_utils::{get_short_name, HashSet};
 
 /// When enabled, runs [`check_hierarchy_component_has_valid_parent<T>`].
 ///
@@ -43,7 +43,7 @@ impl<T> Default for ReportHierarchyIssue<T> {
     }
 }
 
-#[cfg(feature = "bevy_app")]
+#[cfg(feature = "ens_app")]
 /// System to print a warning for each [`Entity`] with a `T` component
 /// which parent hasn't a `T` component.
 ///
@@ -65,8 +65,7 @@ pub fn check_hierarchy_component_has_valid_parent<T: Component>(
         if !component_query.contains(parent) && !already_diagnosed.contains(&entity) {
             already_diagnosed.insert(entity);
             log::warn!(
-                "warning[B0004]: {name} with the {ty_name} component has a parent without {ty_name}.\n\
-                This will cause inconsistent behaviors! See: https://bevyengine.org/learn/errors/#b0004",
+                "warning[B0004]: {name} with the {ty_name} component has a parent without {ty_name}.",
                 ty_name = get_short_name(std::any::type_name::<T>()),
                 name = name.map_or("An entity".to_owned(), |s| format!("The {s} entity")),
             );
@@ -93,11 +92,11 @@ impl<T: Component> Default for ValidParentCheckPlugin<T> {
     }
 }
 
-#[cfg(feature = "bevy_app")]
-impl<T: Component> bevy_app::Plugin for ValidParentCheckPlugin<T> {
-    fn build(&self, app: &mut bevy_app::App) {
+#[cfg(feature = "ens_app")]
+impl<T: Component> ens_app::Plugin for ValidParentCheckPlugin<T> {
+    fn build(&self, app: &mut ens_app::App) {
         app.init_resource::<ReportHierarchyIssue<T>>().add_systems(
-            bevy_app::Last,
+            ens_app::PostUpdate,
             check_hierarchy_component_has_valid_parent::<T>
                 .run_if(resource_equals(ReportHierarchyIssue::<T>::new(true))),
         );

@@ -48,6 +48,7 @@ macro_rules! taskpool {
     };
 }
 
+#[cfg(feature = "compute_task_pool")]
 taskpool! {
     /// A newtype for a task pool for CPU-intensive work that must be completed to
     /// deliver the next frame
@@ -58,6 +59,7 @@ taskpool! {
     (COMPUTE_TASK_POOL, ComputeTaskPool)
 }
 
+#[cfg(feature = "async_compute_task_pool")]
 taskpool! {
     /// A newtype for a task pool for CPU-intensive work that may span across multiple frames
     ///
@@ -66,6 +68,7 @@ taskpool! {
     (ASYNC_COMPUTE_TASK_POOL, AsyncComputeTaskPool)
 }
 
+#[cfg(feature = "io_task_pool")]
 taskpool! {
     /// A newtype for a task pool for IO-intensive work (i.e. tasks that spend very little time in a
     /// "woken" state)

@@ -45,7 +45,7 @@ pub mod prelude {
         world::{EntityMut, EntityRef, EntityWorldMut, FromWorld, World},
     };
 
-    #[cfg(feature = "palallel_scope")]
+    #[cfg(feature = "parallel_scope")]
     pub use crate::system::ParallelCommands;
 
     #[cfg(feature = "run_conditions")]
@@ -67,9 +67,6 @@ pub mod prelude {
     pub use crate::schedule::{
         apply_state_transition, NextState, OnEnter, OnExit, OnTransition, State, States,
     };
-
-    #[cfg(all(feature = "entity_hash", feature = "entity_mapper"))]
-    pub use crate::entity::EntityMapper;
 }
 
 #[cfg(test)]
@@ -309,7 +306,7 @@ mod tests {
         let e = world.spawn((TableStored("abc"), A(123))).id();
         let f = world.spawn((TableStored("def"), A(456))).id();
         assert_eq!(world.entities.len(), 2);
-        assert!(world.despawn(e));
+        world.despawn(e);
         assert_eq!(world.entities.len(), 1);
         assert!(world.get::<TableStored>(e).is_none());
         assert!(world.get::<A>(e).is_none());
@@ -324,7 +321,7 @@ mod tests {
         let e = world.spawn((TableStored("abc"), SparseStored(123))).id();
         let f = world.spawn((TableStored("def"), SparseStored(456))).id();
         assert_eq!(world.entities.len(), 2);
-        assert!(world.despawn(e));
+        world.despawn(e);
         assert_eq!(world.entities.len(), 1);
         assert!(world.get::<TableStored>(e).is_none());
         assert!(world.get::<SparseStored>(e).is_none());
@@ -731,7 +728,7 @@ mod tests {
         let mut i32_bool_query = world.query::<(&A, &B)>();
         assert!(i32_bool_query.get(&world, a).is_err());
         assert_eq!(i32_bool_query.get(&world, c).unwrap(), (&A(789), &B(1)));
-        assert!(world.despawn(a));
+        world.despawn(a);
         assert!(i32_query.get(&world, a).is_err());
     }
 
@@ -948,7 +945,7 @@ mod tests {
         );
 
         // removing an unchanged entity should not change changed state
-        assert!(world.despawn(e2));
+        world.despawn(e2);
         assert_eq!(
             get_filtered::<Changed<A>>(&mut world),
             vec![e3, e1],
@@ -956,7 +953,7 @@ mod tests {
         );
 
         // removing a changed entity should remove it from enumeration
-        assert!(world.despawn(e1));
+        world.despawn(e1);
         assert_eq!(
             get_filtered::<Changed<A>>(&mut world),
             vec![e3],
@@ -1034,7 +1031,7 @@ mod tests {
         );
 
         // removing an unchanged entity should not change changed state
-        assert!(world.despawn(e2));
+        world.despawn(e2);
         assert_eq!(
             get_filtered::<Changed<SparseStored>>(&mut world),
             vec![e3, e1],
@@ -1042,7 +1039,7 @@ mod tests {
         );
 
         // removing a changed entity should remove it from enumeration
-        assert!(world.despawn(e1));
+        world.despawn(e1);
         assert_eq!(
             get_filtered::<Changed<SparseStored>>(&mut world),
             vec![e3],

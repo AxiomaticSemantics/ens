@@ -69,12 +69,12 @@ pub mod prelude {
     pub use crate::{child_builder::*, components::*, hierarchy::*, query_extension::*};
 
     #[doc(hidden)]
-    #[cfg(feature = "bevy_app")]
+    #[cfg(feature = "ens_app")]
     pub use crate::{HierarchyPlugin, ValidParentCheckPlugin};
 }
 
-#[cfg(feature = "bevy_app")]
-use bevy_app::prelude::*;
+#[cfg(feature = "ens_app")]
+use ens_app::prelude::*;
 
 /// Provides hierarchy functionality to a Bevy app.
 ///

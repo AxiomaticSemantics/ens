@@ -144,7 +144,7 @@ impl PluginGroupBuilder {
     /// Adds a [`Plugin`] in this [`PluginGroupBuilder`] before the plugin of type `Target`.
     /// If the plugin was already the group, it is removed from its previous place. There must
     /// be a plugin of type `Target` in the group or it will panic.
-    pub fn before<Target: Plugin, T: Plugin>(mut self, plugin: T) -> Self {
+    pub fn add_before<Target: Plugin, T: Plugin>(mut self, plugin: T) -> Self {
         let target_index = self.index_of::<Target>();
         self.order.insert(target_index, TypeId::of::<T>());
         self.insert_plugin_state(plugin, target_index);
@@ -154,7 +154,7 @@ impl PluginGroupBuilder {
     /// Adds a [`Plugin`] in this [`PluginGroupBuilder`] after the plugin of type `Target`.
     /// If the plugin was already the group, it is removed from its previous place. There must
     /// be a plugin of type `Target` in the group or it will panic.
-    pub fn after<Target: Plugin, T: Plugin>(mut self, plugin: T) -> Self {
+    pub fn add_after<Target: Plugin, T: Plugin>(mut self, plugin: T) -> Self {
         let target_index = self.index_of::<Target>() + 1;
         self.order.insert(target_index, TypeId::of::<T>());
         self.insert_plugin_state(plugin, target_index);

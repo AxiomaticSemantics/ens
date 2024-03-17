@@ -191,10 +191,8 @@ impl<D: QueryData, F: QueryFilter> QueryState<D, F> {
         unsafe {
             self.is_empty_unsafe_world_cell(
                 world.as_unsafe_world_cell_readonly(),
-        #[cfg(feature = "change_detection")]
-                last_run,
-        #[cfg(feature = "change_detection")]
-                this_run,
+                #[cfg(feature = "change_detection")] last_run,
+                #[cfg(feature = "change_detection")] this_run,
             )
         }
     }
@@ -219,11 +217,11 @@ impl<D: QueryData, F: QueryFilter> QueryState<D, F> {
         // - The caller ensures that the world matches.
         unsafe {
             self.as_nop()
-                .iter_unchecked_manual(world, 
-        #[cfg(feature = "change_detection")]
-                    last_run, 
-        #[cfg(feature = "change_detection")]
-                    this_run)
+                .iter_unchecked_manual(
+                    world, 
+                    #[cfg(feature = "change_detection")] last_run, 
+                    #[cfg(feature = "change_detection")] this_run
+                )
                 .next()
                 .is_none()
         }
@@ -277,7 +275,7 @@ impl<D: QueryData, F: QueryFilter> QueryState<D, F> {
     ///
     /// Many unsafe query methods require the world to match for soundness. This function is the easiest
     /// way of ensuring that it matches.
-    #[inline]
+    #[inline(always)]
     #[track_caller]
     pub fn validate_world(&self, world_id: WorldId) {
         #[inline(never)]
@@ -620,11 +618,12 @@ impl<D: QueryData, F: QueryFilter> QueryState<D, F> {
         entity: Entity,
     ) -> Result<D::Item<'w>, QueryEntityError> {
         self.update_archetypes_unsafe_world_cell(world);
-        self.get_unchecked_manual(world, entity, 
-                #[cfg(feature = "change_detection")]
-            world.last_change_tick(), 
-                #[cfg(feature = "change_detection")]
-            world.change_tick())
+        self.get_unchecked_manual(
+            world,
+            entity, 
+            #[cfg(feature = "change_detection")] world.last_change_tick(), 
+            #[cfg(feature = "change_detection")] world.change_tick()
+        )
     }
 
     /// Gets the query result for the given [`World`] and [`Entity`], where the last change and
@@ -660,16 +659,18 @@ impl<D: QueryData, F: QueryFilter> QueryState<D, F> {
             .archetypes()
             .get(location.archetype_id)
             .debug_checked_unwrap();
-        let mut fetch = D::init_fetch(world, &self.fetch_state, 
-        #[cfg(feature = "change_detection")]
-            last_run, 
-        #[cfg(feature = "change_detection")]
-            this_run);
-        let mut filter = F::init_fetch(world, &self.filter_state, 
-        #[cfg(feature = "change_detection")]
-            last_run, 
-        #[cfg(feature = "change_detection")]
-            this_run);
+        let mut fetch = D::init_fetch(
+            world, 
+            &self.fetch_state, 
+            #[cfg(feature = "change_detection")] last_run, 
+            #[cfg(feature = "change_detection")] this_run
+        );
+        let mut filter = F::init_fetch(
+            world, 
+            &self.filter_state, 
+            #[cfg(feature = "change_detection")] last_run, 
+            #[cfg(feature = "change_detection")] this_run
+        );
 
         let table = world
             .storages()
@@ -710,11 +711,12 @@ impl<D: QueryData, F: QueryFilter> QueryState<D, F> {
             // SAFETY: fetch is read-only and world must be validated
             let item = unsafe {
                 self.as_readonly()
-                    .get_unchecked_manual(world, entity, 
-        #[cfg(feature = "change_detection")]
-                        last_run, 
-        #[cfg(feature = "change_detection")]
-                        this_run)?
+                    .get_unchecked_manual(
+                        world, 
+                        entity, 
+                        #[cfg(feature = "change_detection")] last_run, 
+                        #[cfg(feature = "change_detection")] this_run
+                    )?
             };
             *value = MaybeUninit::new(item);
         }
@@ -754,11 +756,12 @@ impl<D: QueryData, F: QueryFilter> QueryState<D, F> {
         let mut values = [(); N].map(|_| MaybeUninit::uninit());
 
         for (value, entity) in std::iter::zip(&mut values, entities) {
-            let item = self.get_unchecked_manual(world, entity, 
-        #[cfg(feature = "change_detection")]
-                last_run, 
-        #[cfg(feature = "change_detection")]
-                this_run)?;
+            let item = self.get_unchecked_manual(
+                world, 
+                entity, 
+                #[cfg(feature = "change_detection")] last_run, 
+                #[cfg(feature = "change_detection")] this_run
+            )?;
             *value = MaybeUninit::new(item);
         }
 
@@ -776,10 +779,8 @@ impl<D: QueryData, F: QueryFilter> QueryState<D, F> {
         unsafe {
             self.as_readonly().iter_unchecked_manual(
                 world.as_unsafe_world_cell_readonly(),
-        #[cfg(feature = "change_detection")]
-                world.last_change_tick(),
-        #[cfg(feature = "change_detection")]
-                world.read_change_tick(),
+                #[cfg(feature = "change_detection")] world.last_change_tick(),
+                #[cfg(feature = "change_detection")] world.read_change_tick(),
             )
         }
     }
@@ -799,7 +800,7 @@ impl<D: QueryData, F: QueryFilter> QueryState<D, F> {
         }
 
 
-         #[cfg(not(feature = "change_detection"))]
+        #[cfg(not(feature = "change_detection"))]
         {
             // SAFETY: query has unique world access
             unsafe {

@@ -2,9 +2,8 @@
 resolver = "2"
 version = "0.14.0-dev"
 edition = "2021"
-categories = ["game-engines", "graphics", "gui", "rendering"]
-description = "A refreshingly simple data-driven game engine and app framework"
-#exclude = ["assets/", "tools/", ".github/", "crates/"]
+categories = ["ecs"]
+description = "A modular ecs framework"
 homepage = "https://github.com/AxiomaticSematnics/ens"
 keywords = ["game", "engine", "gamedev", "graphics", "bevy"]
 license = "MIT OR Apache-2.0"
@@ -14,6 +13,7 @@ documentation = "https://docs.rs/ens"
 rust-version = "1.76.0"
 exclude = [
   "benches",
+  "tools",
   "crates/ens_compile_fail_tests",
   "crates/ens_macros_compile_fail_tests",
 ]
@@ -23,7 +23,7 @@ members = [
   "tools/build-templated-pages",
 ]
 
-[package]
+#[package]
 name = "ens_ecs"
 
 [workspace.lints.clippy]
@@ -44,5 +44,5 @@ ptr_cast_constness = "warn"
 unsafe_op_in_unsafe_fn = "warn"
 missing_docs = "warn"
 
-[package.metadata.docs.rs]
-cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
+#[package.metadata.docs.rs]
+#cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]

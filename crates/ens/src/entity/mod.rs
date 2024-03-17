@@ -35,10 +35,6 @@
 //! [`World::despawn`]: crate::world::World::despawn
 //! [`EntityWorldMut::insert`]: crate::world::EntityWorldMut::insert
 //! [`EntityWorldMut::remove`]: crate::world::EntityWorldMut::remove
-#[cfg(all(feature = "entity_hash", feature = "entity_mapper"))]
-mod map_entities;
-#[cfg(all(feature = "entity_hash", feature = "entity_mapper"))]
-pub use map_entities::*;
 
 #[cfg(feature = "entity_hash")]
 mod hash;

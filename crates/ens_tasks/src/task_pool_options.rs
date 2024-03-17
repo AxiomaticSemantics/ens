@@ -1,4 +1,11 @@
-use crate::{AsyncComputeTaskPool, ComputeTaskPool, IoTaskPool, TaskPoolBuilder};
+#[cfg(feature = "async_compute_task_pool")]
+use crate::AsyncComputeTaskPool;
+#[cfg(feature = "compute_task_pool")]
+use crate::ComputeTaskPool;
+#[cfg(feature = "async_compute_task_pool")]
+use crate::IoTaskPool;
+
+use crate::TaskPoolBuilder;
 
 /// Defines a simple way to determine how many threads to use given the number of remaining cores
 /// and number of total cores
@@ -96,6 +103,7 @@ impl TaskPoolOptions {
 
         let mut remaining_threads = total_threads;
 
+        #[cfg(feature = "io_task_pool")]
         {
             // Determine the number of IO threads we will use
             let io_threads = self
@@ -112,6 +120,7 @@ impl TaskPoolOptions {
             });
         }
 
+        #[cfg(feature = "async_compute_task_pool")]
         {
             // Determine the number of async compute threads we will use
             let async_compute_threads = self
@@ -128,6 +137,7 @@ impl TaskPoolOptions {
             });
         }
 
+        #[cfg(feature = "compute_task_pool")]
         {
             // Determine the number of compute threads we will use
             // This is intentionally last so that an end user can specify 1.0 as the percent
