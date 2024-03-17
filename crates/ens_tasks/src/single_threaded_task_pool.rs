@@ -172,7 +172,7 @@ impl TaskPool {
     /// other things.
     ///
     /// ```
-    /// use bevy_tasks::TaskPool;
+    /// use ens_tasks::TaskPool;
     ///
     /// TaskPool::new().with_local_executor(|local_executor| {
     ///     local_executor.try_tick();

@@ -6,7 +6,6 @@
 /// would be `Vec<Option<u32>>`.
 pub fn get_short_name(full_name: &str) -> String {
     // Generics result in nested paths within <..> blocks.
-    // Consider "bevy_render::camera::camera::extract_cameras<bevy_render::camera::bundle::Camera3d>".
     // To tackle this, we parse the string from left to right, collapsing as we go.
     let mut index: usize = 0;
     let end_of_string = full_name.len();
@@ -87,7 +86,7 @@ mod name_formatting_tests {
     #[test]
     fn path_separated() {
         assert_eq!(
-            get_short_name("bevy_prelude::make_fun_game"),
+            get_short_name("ens_prelude::make_fun_game"),
             "make_fun_game".to_string()
         );
     }
@@ -123,23 +122,23 @@ mod name_formatting_tests {
             "Option::Some(2)".to_string()
         );
         assert_eq!(
-            get_short_name("bevy_render::RenderSet::Prepare"),
-            "RenderSet::Prepare".to_string()
+            get_short_name("ens_core::Enum::Variant"),
+            "Enum::Variant".to_string()
         );
     }
 
     #[test]
     fn generics() {
         assert_eq!(
-            get_short_name("bevy_render::camera::camera::extract_cameras<bevy_render::camera::bundle::Camera3d>"),
-            "extract_cameras<Camera3d>".to_string()
+            get_short_name("ens_core::one::two::gen_one<ens_core::one::bundle::One>"),
+            "gen_one<One>".to_string()
         );
     }
 
     #[test]
     fn nested_generics() {
         assert_eq!(
-            get_short_name("bevy::mad_science::do_mad_science<mad_science::Test<mad_science::Tube>, bavy::TypeSystemAbuse>"),
+            get_short_name("ens_core::mad_science::do_mad_science<mad_science::Test<mad_science::Tube>, ens::TypeSystemAbuse>"),
             "do_mad_science<Test<Tube>, TypeSystemAbuse>".to_string()
         );
     }
@@ -147,8 +146,8 @@ mod name_formatting_tests {
     #[test]
     fn sub_path_after_closing_bracket() {
         assert_eq!(
-            get_short_name("bevy_asset::assets::Assets<bevy_scene::dynamic_scene::DynamicScene>::asset_event_system"),
-            "Assets<DynamicScene>::asset_event_system".to_string()
+            get_short_name("ens_core::one::Gen<ens_core::dyn::Dynamic>::system"),
+            "Gen<Dynamic>::system".to_string()
         );
         assert_eq!(
             get_short_name("(String, String)::default"),

@@ -1,15 +1,18 @@
 use crate::{Children, HierarchyEvent, Parent};
+#[cfg(feature = "events")]
+use ens::event::Events;
 use ens::{
     bundle::Bundle,
     entity::Entity,
-    prelude::Events,
     system::{Commands, EntityCommands},
     world::{Command, EntityWorldMut, World},
 };
+
 use smallvec::{smallvec, SmallVec};
 
 // Do not use `world.send_event_batch` as it prints error message when the Events are not available in the world,
-// even though it's a valid use case to execute commands on a world without events. Loading a GLTF file for example
+// even though it's a valid use case to execute commands on a world without events.
+#[cfg(feature = "events")]
 fn push_events(world: &mut World, events: impl IntoIterator<Item = HierarchyEvent>) {
     if let Some(mut moved) = world.get_resource_mut::<Events<HierarchyEvent>>() {
         moved.extend(events);
@@ -96,6 +99,7 @@ fn update_old_parent(world: &mut World, child: Entity, parent: Entity) {
 ///
 /// Sends [`HierarchyEvent`]'s.
 fn update_old_parents(world: &mut World, parent: Entity, children: &[Entity]) {
+    #[cfg(feature = "events")]
     let mut events: SmallVec<[HierarchyEvent; 8]> = SmallVec::with_capacity(children.len());
     for &child in children {
         if let Some(previous) = update_parent(world, child, parent) {
@@ -105,12 +109,14 @@ fn update_old_parents(world: &mut World, parent: Entity, children: &[Entity]) {
             }
 
             remove_from_children(world, previous, child);
+            #[cfg(feature = "events")]
             events.push(HierarchyEvent::ChildMoved {
                 child,
                 previous_parent: previous,
                 new_parent: parent,
             });
         } else {
+            #[cfg(feature = "events")]
             events.push(HierarchyEvent::ChildAdded { child, parent });
         }
     }
@@ -120,22 +126,25 @@ fn update_old_parents(world: &mut World, parent: Entity, children: &[Entity]) {
 /// Removes entities in `children` from `parent`'s [`Children`], removing the component if it ends up empty.
 /// Also removes [`Parent`] component from `children`.
 fn remove_children(parent: Entity, children: &[Entity], world: &mut World) {
-    let mut events: SmallVec<[HierarchyEvent; 8]> = SmallVec::new();
-    if let Some(parent_children) = world.get::<Children>(parent) {
-        for &child in children {
-            if parent_children.contains(&child) {
-                events.push(HierarchyEvent::ChildRemoved { child, parent });
+    #[cfg(feature = "events")]
+    {
+        let mut events: SmallVec<[HierarchyEvent; 8]> = SmallVec::new();
+        if let Some(parent_children) = world.get::<Children>(parent) {
+            for &child in children {
+                if parent_children.contains(&child) {
+                    events.push(HierarchyEvent::ChildRemoved { child, parent });
+                }
+            }
+        } else {
+            return;
+        }
+        for event in &events {
+            if let &HierarchyEvent::ChildRemoved { child, .. } = event {
+                world.entity_mut(child).remove::<Parent>();
             }
         }
-    } else {
-        return;
+        push_events(world, events);
     }
-    for event in &events {
-        if let &HierarchyEvent::ChildRemoved { child, .. } = event {
-            world.entity_mut(child).remove::<Parent>();
-        }
-    }
-    push_events(world, events);
 
     let mut parent = world.entity_mut(parent);
     if let Some(mut parent_children) = parent.get_mut::<Children>() {
@@ -259,9 +268,9 @@ impl Command for RemoveParent {
 /// This example creates three entities, a parent and two children.
 ///
 /// ```
-/// # use bevy_ecs::bundle::Bundle;
-/// # use bevy_ecs::system::Commands;
-/// # use bevy_hierarchy::BuildChildren;
+/// # use ens::bundle::Bundle;
+/// # use ens::system::Commands;
+/// # use ens_hierarchy::BuildChildren;
 /// # #[derive(Bundle)]
 /// # struct MyBundle {}
 /// # #[derive(Bundle)]
@@ -698,7 +707,7 @@ mod tests {
     };
     use smallvec::{smallvec, SmallVec};
 
-    use bevy_ecs::{
+    use ens::{
         component::Component,
         entity::Entity,
         event::Events,

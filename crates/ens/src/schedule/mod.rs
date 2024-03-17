@@ -1029,22 +1029,22 @@ mod tests {
                 (
                     "system_d".to_string(),
                     "system_a".to_string(),
-                    vec!["bevy_ecs::schedule::tests::system_ambiguity::R"],
+                    vec!["ens::schedule::tests::system_ambiguity::R"],
                 ),
                 (
                     "system_d".to_string(),
                     "system_e".to_string(),
-                    vec!["bevy_ecs::schedule::tests::system_ambiguity::R"],
+                    vec!["ens::schedule::tests::system_ambiguity::R"],
                 ),
                 (
                     "system_b".to_string(),
                     "system_a".to_string(),
-                    vec!["bevy_ecs::schedule::tests::system_ambiguity::R"],
+                    vec!["ens::schedule::tests::system_ambiguity::R"],
                 ),
                 (
                     "system_b".to_string(),
                     "system_e".to_string(),
-                    vec!["bevy_ecs::schedule::tests::system_ambiguity::R"],
+                    vec!["ens::schedule::tests::system_ambiguity::R"],
                 ),
             ];
 

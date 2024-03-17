@@ -1,8 +1,8 @@
-use bevy_ecs::{event::Event, prelude::Entity};
+use ens::{entity::Entity, event::Event};
 
 /// An [`Event`] that is fired whenever there is a change in the world's hierarchy.
 ///
-/// [`Event`]: bevy_ecs::event::Event
+/// [`Event`]: ens::event::Event
 #[derive(Event, Debug, Clone, PartialEq, Eq)]
 pub enum HierarchyEvent {
     /// Fired whenever an [`Entity`] is added as a child to a parent.

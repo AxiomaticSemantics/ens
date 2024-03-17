@@ -50,6 +50,7 @@ use crate::{
 };
 
 use ens_ptr::{OwningPtr, Ptr};
+#[cfg(feature = "log")]
 use log::warn;
 use std::{
     any::TypeId,

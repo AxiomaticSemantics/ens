@@ -26,7 +26,7 @@ use crate::HashSet;
 // NOTE: This type must NEVER implement Borrow since it does not obey that trait's invariants.
 ///
 /// ```
-/// # use bevy_utils::intern::*;
+/// # use ens_utils::intern::*;
 /// #[derive(PartialEq, Eq, Hash, Debug)]
 /// struct Value(i32);
 /// impl Internable for Value {

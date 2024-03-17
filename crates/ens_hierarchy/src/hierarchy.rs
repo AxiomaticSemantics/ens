@@ -55,26 +55,12 @@ fn despawn_children_recursive(world: &mut World, entity: Entity) {
 
 impl Command for DespawnRecursive {
     fn apply(self, world: &mut World) {
-        #[cfg(feature = "trace")]
-        let _span = bevy_utils::tracing::info_span!(
-            "command",
-            name = "DespawnRecursive",
-            entity = bevy_utils::tracing::field::debug(self.entity)
-        )
-        .entered();
         despawn_with_children_recursive(world, self.entity);
     }
 }
 
 impl Command for DespawnChildrenRecursive {
     fn apply(self, world: &mut World) {
-        #[cfg(feature = "trace")]
-        let _span = bevy_utils::tracing::info_span!(
-            "command",
-            name = "DespawnChildrenRecursive",
-            entity = bevy_utils::tracing::field::debug(self.entity)
-        )
-        .entered();
         despawn_children_recursive(world, self.entity);
     }
 }
@@ -107,25 +93,11 @@ impl<'w> DespawnRecursiveExt for EntityWorldMut<'w> {
     fn despawn_recursive(self) {
         let entity = self.id();
 
-        #[cfg(feature = "trace")]
-        let _span = bevy_utils::tracing::info_span!(
-            "despawn_recursive",
-            entity = bevy_utils::tracing::field::debug(entity)
-        )
-        .entered();
-
         despawn_with_children_recursive(self.into_world_mut(), entity);
     }
 
     fn despawn_descendants(&mut self) -> &mut Self {
         let entity = self.id();
-
-        #[cfg(feature = "trace")]
-        let _span = bevy_utils::tracing::info_span!(
-            "despawn_descendants",
-            entity = bevy_utils::tracing::field::debug(entity)
-        )
-        .entered();
 
         self.world_scope(|world| {
             despawn_children_recursive(world, entity);
@@ -136,7 +108,7 @@ impl<'w> DespawnRecursiveExt for EntityWorldMut<'w> {
 
 #[cfg(test)]
 mod tests {
-    use bevy_ecs::{
+    use ens::{
         component::Component,
         system::Commands,
         world::{CommandQueue, World},

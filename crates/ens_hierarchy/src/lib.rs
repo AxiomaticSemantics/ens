@@ -32,7 +32,7 @@
 //!
 //! ## Despawning entities
 //!
-//! The commands and methods provided by `bevy_ecs` to despawn entities
+//! The commands and methods provided by `ens` to despawn entities
 //! are not capable of automatically despawning hierarchies of entities.
 //! In most cases, these operations will invalidate the hierarchy.
 //! Instead, you should use the provided [hierarchical despawn extension methods].
@@ -54,7 +54,9 @@ pub use hierarchy::*;
 mod child_builder;
 pub use child_builder::*;
 
+#[cfg(feature = "events")]
 mod events;
+#[cfg(feature = "events")]
 pub use events::*;
 
 mod valid_parent_check_plugin;
@@ -86,6 +88,7 @@ pub struct HierarchyPlugin;
 
 impl Plugin for HierarchyPlugin {
     fn build(&self, app: &mut App) {
+        #[cfg(feature = "events")]
         app.add_event::<HierarchyEvent>();
     }
 }
