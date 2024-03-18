@@ -203,8 +203,6 @@ pub mod common_conditions {
 
     #[cfg(feature = "change_detection")]
     use crate::change_detection::DetectChanges;
-    #[cfg(feature = "states")]
-    use crate::schedule::{State, States};
 
     #[cfg(feature = "events")]
     use crate::{
@@ -666,176 +664,6 @@ pub mod common_conditions {
         }
     }
 
-    /// A [`Condition`](super::Condition)-satisfying system that returns `true`
-    /// if the state machine exists.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use ens::prelude::*;
-    /// # #[derive(Resource, Default)]
-    /// # struct Counter(u8);
-    /// # let mut app = Schedule::default();
-    /// # let mut world = World::new();
-    /// # world.init_resource::<Counter>();
-    /// #[derive(States, Clone, Copy, Default, Eq, PartialEq, Hash, Debug)]
-    /// enum GameState {
-    ///     #[default]
-    ///     Playing,
-    ///     Paused,
-    /// }
-    ///
-    /// app.add_systems(
-    ///     // `state_exists` will only return true if the
-    ///     // given state exists
-    ///     my_system.run_if(state_exists::<GameState>),
-    /// );
-    ///
-    /// fn my_system(mut counter: ResMut<Counter>) {
-    ///     counter.0 += 1;
-    /// }
-    ///
-    /// // `GameState` does not yet exist `my_system` won't run
-    /// app.run(&mut world);
-    /// assert_eq!(world.resource::<Counter>().0, 0);
-    ///
-    /// world.init_resource::<State<GameState>>();
-    ///
-    /// // `GameState` now exists so `my_system` will run
-    /// app.run(&mut world);
-    /// assert_eq!(world.resource::<Counter>().0, 1);
-    /// ```
-    #[cfg(feature = "states")]
-    pub fn state_exists<S: States>(current_state: Option<Res<State<S>>>) -> bool {
-        current_state.is_some()
-    }
-
-    /// Generates a [`Condition`](super::Condition)-satisfying closure that returns `true`
-    /// if the state machine is currently in `state`.
-    ///
-    /// Will return `false` if the state does not exist or if not in `state`.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use ens::prelude::*;
-    /// # #[derive(Resource, Default)]
-    /// # struct Counter(u8);
-    /// # let mut app = Schedule::default();
-    /// # let mut world = World::new();
-    /// # world.init_resource::<Counter>();
-    /// #[derive(States, Clone, Copy, Default, Eq, PartialEq, Hash, Debug)]
-    /// enum GameState {
-    ///     #[default]
-    ///     Playing,
-    ///     Paused,
-    /// }
-    ///
-    /// world.init_resource::<State<GameState>>();
-    ///
-    /// app.add_systems((
-    ///     // `in_state` will only return true if the
-    ///     // given state equals the given value
-    ///     play_system.run_if(in_state(GameState::Playing)),
-    ///     pause_system.run_if(in_state(GameState::Paused)),
-    /// ));
-    ///
-    /// fn play_system(mut counter: ResMut<Counter>) {
-    ///     counter.0 += 1;
-    /// }
-    ///
-    /// fn pause_system(mut counter: ResMut<Counter>) {
-    ///     counter.0 -= 1;
-    /// }
-    ///
-    /// // We default to `GameState::Playing` so `play_system` runs
-    /// app.run(&mut world);
-    /// assert_eq!(world.resource::<Counter>().0, 1);
-    ///
-    /// *world.resource_mut::<State<GameState>>() = State::new(GameState::Paused);
-    ///
-    /// // Now that we are in `GameState::Pause`, `pause_system` will run
-    /// app.run(&mut world);
-    /// assert_eq!(world.resource::<Counter>().0, 0);
-    /// ```
-    #[cfg(feature = "states")]
-    pub fn in_state<S: States>(state: S) -> impl FnMut(Option<Res<State<S>>>) -> bool + Clone {
-        move |current_state: Option<Res<State<S>>>| match current_state {
-            Some(current_state) => *current_state == state,
-            None => {
-                log::warn!("No state matching the type for {} exists - did you forget to `add_state` when initializing the app?", {
-                        let debug_state = format!("{state:?}");
-                        let result = debug_state
-                            .split("::")
-                            .next()
-                            .unwrap_or("Unknown State Type");
-                        result.to_string()
-                    });
-
-                false
-            }
-        }
-    }
-
-    /// A [`Condition`](super::Condition)-satisfying system that returns `true`
-    /// if the state machine changed state.
-    ///
-    /// To do things on transitions to/from specific states, use their respective OnEnter/OnExit
-    /// schedules. Use this run condition if you want to detect any change, regardless of the value.
-    ///
-    /// Returns false if the state does not exist or the state has not changed.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use ens::prelude::*;
-    /// # #[derive(Resource, Default)]
-    /// # struct Counter(u8);
-    /// # let mut app = Schedule::default();
-    /// # let mut world = World::new();
-    /// # world.init_resource::<Counter>();
-    /// #[derive(States, Clone, Copy, Default, Eq, PartialEq, Hash, Debug)]
-    /// enum GameState {
-    ///     #[default]
-    ///     Playing,
-    ///     Paused,
-    /// }
-    ///
-    /// world.init_resource::<State<GameState>>();
-    ///
-    /// app.add_systems(
-    ///     // `state_changed` will only return true if the
-    ///     // given states value has just been updated or
-    ///     // the state has just been added
-    ///     my_system.run_if(state_changed::<GameState>),
-    /// );
-    ///
-    /// fn my_system(mut counter: ResMut<Counter>) {
-    ///     counter.0 += 1;
-    /// }
-    ///
-    /// // `GameState` has just been added so `my_system` will run
-    /// app.run(&mut world);
-    /// assert_eq!(world.resource::<Counter>().0, 1);
-    ///
-    /// // `GameState` has not been updated so `my_system` will not run
-    /// app.run(&mut world);
-    /// assert_eq!(world.resource::<Counter>().0, 1);
-    ///
-    /// *world.resource_mut::<State<GameState>>() = State::new(GameState::Paused);
-    ///
-    /// // Now that `GameState` has been updated `my_system` will run
-    /// app.run(&mut world);
-    /// assert_eq!(world.resource::<Counter>().0, 2);
-    /// ```
-    #[cfg(feature = "states")]
-    pub fn state_changed<S: States>(current_state: Option<Res<State<S>>>) -> bool {
-        let Some(current_state) = current_state else {
-            return false;
-        };
-        current_state.is_changed()
-    }
-
     /// Generates a [`Condition`](super::Condition)-satisfying closure that returns `true`
     /// if there are any new events of the given type since it was last called.
     ///
@@ -1047,11 +875,10 @@ mod tests {
     use crate::access::ResMut;
     use crate::component::Component;
     use crate::event::Event;
+    use crate::schedule::common_conditions::not;
     use crate::schedule::IntoSystemConfigs;
-    use crate::schedule::{common_conditions::not, State};
     use crate::system::{Local, Resource};
     use crate::{schedule::Schedule, world::World};
-    use ens_macros::States;
 
     #[derive(Resource, Default)]
     struct Counter(usize);
@@ -1147,8 +974,8 @@ mod tests {
         assert_eq!(world.resource::<Counter>().0, 0);
     }
 
-    #[derive(States, PartialEq, Eq, Debug, Default, Hash, Clone)]
-    enum TestState {
+    #[derive(Resource, PartialEq, Eq, Debug, Default, Hash, Clone)]
+    enum TestResource {
         #[default]
         A,
         B,
@@ -1168,15 +995,12 @@ mod tests {
         Schedule::default().add_systems(
             (test_system, test_system)
                 .distributive_run_if(run_once())
-                .distributive_run_if(resource_exists::<State<TestState>>)
-                .distributive_run_if(resource_added::<State<TestState>>)
-                .distributive_run_if(resource_changed::<State<TestState>>)
-                .distributive_run_if(resource_exists_and_changed::<State<TestState>>)
-                .distributive_run_if(resource_changed_or_removed::<State<TestState>>())
-                .distributive_run_if(resource_removed::<State<TestState>>())
-                .distributive_run_if(state_exists::<TestState>)
-                .distributive_run_if(in_state(TestState::A).or_else(in_state(TestState::B)))
-                .distributive_run_if(state_changed::<TestState>)
+                .distributive_run_if(resource_exists::<TestResource>)
+                .distributive_run_if(resource_added::<TestResource>)
+                .distributive_run_if(resource_changed::<TestResource>)
+                .distributive_run_if(resource_exists_and_changed::<TestResource>)
+                .distributive_run_if(resource_changed_or_removed::<TestResource>())
+                .distributive_run_if(resource_removed::<TestResource>())
                 .distributive_run_if(on_event::<TestEvent>())
                 .distributive_run_if(any_with_component::<TestComponent>)
                 .distributive_run_if(not(run_once())),

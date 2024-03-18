@@ -6,8 +6,6 @@ extern crate proc_macro;
 mod component;
 mod query_data;
 mod query_filter;
-#[cfg(feature = "states")]
-mod states;
 mod world_query;
 
 use crate::{query_data::derive_query_data_impl, query_filter::derive_query_filter_impl};

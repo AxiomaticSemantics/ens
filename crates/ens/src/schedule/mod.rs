@@ -7,21 +7,15 @@ mod graph_utils;
 #[allow(clippy::module_inception)]
 mod schedule;
 mod set;
-#[cfg(feature = "states")]
-mod state;
 
 #[cfg(feature = "run_conditions")]
 pub use self::condition::*;
 pub use self::config::*;
 pub use self::executor::*;
+pub use self::graph_utils::NodeId;
 use self::graph_utils::*;
 pub use self::schedule::*;
 pub use self::set::*;
-
-#[cfg(feature = "states")]
-pub use self::state::*;
-
-pub use self::graph_utils::NodeId;
 
 #[cfg(test)]
 mod tests {

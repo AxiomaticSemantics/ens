@@ -2,22 +2,21 @@
 name = "ens_app"
 version = "0.14.0-dev"
 edition = "2021"
-description = "Provides core App functionality for Bevy Engine"
+description = "Provides core App functionality for Ens"
 homepage = "https://bevyengine.org"
-repository = "https://github.com/bevyengine/bevy"
+repository = "https://github.com/AxiomaticSemantics/ens"
 license = "MIT OR Apache-2.0"
-keywords = ["bevy"]
+keywords = ["ecs"]
 
 [features]
 events = ["ens/events"]
-states = ["ens/states"]
 derive = ["ens/derive_macros", "ens_derive"]
 startup = []
 loop_wait = []
 default = ["derive"]
 
 [dependencies]
-# bevy
+# ens
 ens = { path = "../ens", version = "0.14.0-dev" }
 ens_utils = { path = "../ens_utils", version = "0.14.0-dev" }
 ens_tasks = { path = "../ens_tasks", version = "0.14.0-dev" }
