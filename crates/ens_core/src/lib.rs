@@ -100,10 +100,7 @@ mod tests {
     #[test]
     fn frame_counter_update() {
         let mut app = App::new();
-        app.add_plugins((
-            TaskPoolPlugin::default(),
-            FrameCountPlugin,
-        ));
+        app.add_plugins((TaskPoolPlugin::default(), FrameCountPlugin));
         app.update();
 
         let frame_count = app.world.resource::<FrameCount>();

@@ -2,11 +2,11 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use std::{env, path::PathBuf};
-use toml_edit::{Document, Item};
+use toml_edit::{DocumentMut, Item};
 
 /// The path to the `Cargo.toml` file for the Ens project.
 pub struct EnsManifest {
-    manifest: Document,
+    manifest: DocumentMut,
 }
 
 impl Default for EnsManifest {
@@ -25,7 +25,7 @@ impl Default for EnsManifest {
                     let manifest = std::fs::read_to_string(path.clone()).unwrap_or_else(|_| {
                         panic!("Unable to read cargo manifest: {}", path.display())
                     });
-                    manifest.parse::<Document>().unwrap_or_else(|_| {
+                    manifest.parse::<DocumentMut>().unwrap_or_else(|_| {
                         panic!("Failed to parse cargo manifest: {}", path.display())
                     })
                 })
@@ -34,7 +34,6 @@ impl Default for EnsManifest {
     }
 }
 const ENS: &str = "ens";
-const ENS_INTERNAL: &str = "ens_internal";
 
 impl EnsManifest {
     /// Attempt to retrieve the [path](syn::Path) of a particular package in
@@ -53,8 +52,6 @@ impl EnsManifest {
                 return Some(Self::parse_str(dep_package(dep).unwrap_or(name)));
             } else if let Some(dep) = deps.get(ENS) {
                 dep_package(dep).unwrap_or(ENS)
-            } else if let Some(dep) = deps.get(ENS_INTERNAL) {
-                dep_package(dep).unwrap_or(ENS_INTERNAL)
             } else {
                 return None;
             };

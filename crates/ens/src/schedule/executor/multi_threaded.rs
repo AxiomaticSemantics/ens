@@ -28,12 +28,12 @@ use crate as ens;
 /// Borrowed data used by the [`MultiThreadedExecutor`].
 struct Environment<'env, 'sys> {
     executor: &'env MultiThreadedExecutor,
-    systems: &'sys [SyncUnsafeCell<BoxedSystem>], 
+    systems: &'sys [SyncUnsafeCell<BoxedSystem>],
     #[cfg(feature = "run_conditions")]
     conditions: Mutex<Conditions<'sys>>,
     world_cell: UnsafeWorldCell<'env>,
 }
- 
+
 #[cfg(feature = "run_conditions")]
 struct Conditions<'a> {
     system_conditions: &'a mut [Vec<BoxedCondition>],
@@ -392,7 +392,8 @@ impl ExecutorState {
                 if !self.can_run(
                     system_index,
                     system,
-                    #[cfg(feature = "run_conditions")] &mut conditions,
+                    #[cfg(feature = "run_conditions")]
+                    &mut conditions,
                     context.environment.world_cell,
                 ) {
                     // NOTE: exclusive systems with ambiguities are susceptible to
@@ -411,7 +412,8 @@ impl ExecutorState {
                     !self.should_run(
                         system_index,
                         system,
-                        #[cfg(feature = "run_conditions")] &mut conditions,
+                        #[cfg(feature = "run_conditions")]
+                        &mut conditions,
                         context.environment.world_cell,
                     )
                 } {
@@ -452,8 +454,7 @@ impl ExecutorState {
         &mut self,
         system_index: usize,
         system: &mut BoxedSystem,
-        #[cfg(feature = "run_conditions")]
-        conditions: &mut Conditions,
+        #[cfg(feature = "run_conditions")] conditions: &mut Conditions,
         world: UnsafeWorldCell,
     ) -> bool {
         let system_meta = &self.system_task_metadata[system_index];
@@ -521,12 +522,11 @@ impl ExecutorState {
         &mut self,
         system_index: usize,
         _system: &BoxedSystem,
-        #[cfg(feature = "run_conditions")]
-        conditions: &mut Conditions,
+        #[cfg(feature = "run_conditions")] conditions: &mut Conditions,
         world: UnsafeWorldCell,
     ) -> bool {
         let mut should_run = !self.skipped_systems.contains(system_index);
-        
+
         #[cfg(feature = "run_conditions")]
         for set_idx in conditions.sets_with_conditions_of_systems[system_index].ones() {
             if self.evaluated_sets.contains(set_idx) {
@@ -548,7 +548,6 @@ impl ExecutorState {
             }
 
             should_run &= set_conditions_met;
-        
 
             self.evaluated_sets.insert(set_idx);
         }
@@ -558,7 +557,8 @@ impl ExecutorState {
         // - The caller ensures that `world` has permission to read any data
         //   required by the conditions.
         // - `update_archetype_component_access` has been called for each run condition.
-        #[cfg(feature = "run_conditions")] {
+        #[cfg(feature = "run_conditions")]
+        {
             let system_conditions_met = unsafe {
                 evaluate_and_fold_conditions(&mut conditions.system_conditions[system_index], world)
             };
@@ -570,7 +570,8 @@ impl ExecutorState {
             should_run &= system_conditions_met;
         }
 
-        #[cfg(feature = "run_conditions")] {
+        #[cfg(feature = "run_conditions")]
+        {
             should_run &= true;
         }
 

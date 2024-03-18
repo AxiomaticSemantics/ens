@@ -1234,7 +1234,6 @@ unsafe impl<'__w, T: Component> WorldQuery for &'__w mut T {
 
                     Mut {
                         value: component.deref_mut(),
-                        #[cfg(feature = "change_detection")]
                         ticks: TicksMut {
                             added: added.deref_mut(),
                             changed: changed.deref_mut(),
@@ -1274,7 +1273,6 @@ unsafe impl<'__w, T: Component> WorldQuery for &'__w mut T {
 
                     Mut {
                         value: component.assert_unique().deref_mut(),
-                        #[cfg(feature = "change_detection")]
                         ticks: TicksMut::from_tick_cells(ticks, fetch.last_run, fetch.this_run),
                     }
                 }

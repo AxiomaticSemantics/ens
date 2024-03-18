@@ -29,7 +29,7 @@ pub use ens_ptr as ptr;
 pub mod prelude {
     #[doc(hidden)]
     pub use crate::{
-        access::{Mut, NonSendMut, Ref, Res, ResMut},
+        access::{Mut, Ref, Res, ResMut},
         bundle::Bundle,
         component::Component,
         entity::Entity,
@@ -39,11 +39,14 @@ pub mod prelude {
             Schedules, SystemSet,
         },
         system::{
-            Commands, Deferred, In, IntoSystem, Local, NonSend, ParamSet, Query, ReadOnlySystem,
-            Resource, System, SystemParamFunction,
+            Commands, Deferred, In, IntoSystem, Local, ParamSet, Query, ReadOnlySystem, Resource,
+            System, SystemParamFunction,
         },
         world::{EntityMut, EntityRef, EntityWorldMut, FromWorld, World},
     };
+
+    #[cfg(feature = "non_send")]
+    pub use crate::{access::NonSendMut, system::NonSend};
 
     #[cfg(feature = "parallel_scope")]
     pub use crate::system::ParallelCommands;
@@ -61,12 +64,6 @@ pub mod prelude {
     pub use crate::event::{Event, EventReader, EventWriter, Events};
     #[cfg(feature = "events")]
     pub use crate::removal_detection::RemovedComponents;
-    #[cfg(all(feature = "states", feature = "events"))]
-    pub use crate::schedule::StateTransitionEvent;
-    #[cfg(feature = "states")]
-    pub use crate::schedule::{
-        apply_state_transition, NextState, OnEnter, OnExit, OnTransition, State, States,
-    };
 }
 
 #[cfg(test)]

@@ -226,81 +226,6 @@ impl App {
         self.plugins_state = PluginsState::Cleaned;
     }
 
-    /// Initializes a [`State`] with standard starting values.
-    ///
-    /// If the [`State`] already exists, nothing happens.
-    ///
-    /// Adds [`State<S>`] and [`NextState<S>`] resources, [`OnEnter`] and [`OnExit`] schedules
-    /// for each state variant (if they don't already exist), an instance of [`apply_state_transition::<S>`] in
-    /// [`StateTransition`] so that transitions happen before [`Update`](crate::Update) and
-    /// a instance of [`run_enter_schedule::<S>`] in [`StateTransition`] with a
-    /// [`run_once`](`run_once_condition`) condition to run the on enter schedule of the
-    /// initial state.
-    ///
-    /// If you would like to control how other systems run based on the current state,
-    /// you can emulate this behavior using the [`in_state`] [`Condition`].
-    ///
-    /// Note that you can also apply state transitions at other points in the schedule
-    /// by adding the [`apply_state_transition`] system manually.
-    #[cfg(feature = "states")]
-    pub fn init_state<S: States + FromWorld>(&mut self) -> &mut Self {
-        if !self.world.contains_resource::<State<S>>() {
-            self.init_resource::<State<S>>()
-                .init_resource::<NextState<S>>()
-                .add_event::<StateTransitionEvent<S>>()
-                .add_systems(
-                    StateTransition,
-                    (
-                        run_enter_schedule::<S>.run_if(run_once_condition()),
-                        apply_state_transition::<S>,
-                    )
-                        .chain(),
-                );
-        }
-
-        // The OnEnter, OnExit, and OnTransition schedules are lazily initialized
-        // (i.e. when the first system is added to them), and World::try_run_schedule is used to fail
-        // gracefully if they aren't present.
-
-        self
-    }
-
-    /// Inserts a specific [`State`] to the current [`App`] and
-    /// overrides any [`State`] previously added of the same type.
-    ///
-    /// Adds [`State<S>`] and [`NextState<S>`] resources, [`OnEnter`] and [`OnExit`] schedules
-    /// for each state variant (if they don't already exist), an instance of [`apply_state_transition::<S>`] in
-    /// [`StateTransition`] so that transitions happen before [`Update`](crate::Update) and
-    /// a instance of [`run_enter_schedule::<S>`] in [`StateTransition`] with a
-    /// [`run_once`](`run_once_condition`) condition to run the on enter schedule of the
-    /// initial state.
-    ///
-    /// If you would like to control how other systems run based on the current state,
-    /// you can emulate this behavior using the [`in_state`] [`Condition`].
-    ///
-    /// Note that you can also apply state transitions at other points in the schedule
-    /// by adding the [`apply_state_transition`] system manually.
-    #[cfg(feature = "states")]
-    pub fn insert_state<S: States>(&mut self, state: S) -> &mut Self {
-        self.insert_resource(State::new(state))
-            .init_resource::<NextState<S>>()
-            .add_event::<StateTransitionEvent<S>>()
-            .add_systems(
-                StateTransition,
-                (
-                    run_enter_schedule::<S>.run_if(run_once_condition()),
-                    apply_state_transition::<S>,
-                )
-                    .chain(),
-            );
-
-        // The OnEnter, OnExit, and OnTransition schedules are lazily initialized
-        // (i.e. when the first system is added to them), and World::try_run_schedule is used to fail
-        // gracefully if they aren't present.
-
-        self
-    }
-
     /// Adds a system to the given schedule in this app's [`Schedules`].
     ///
     /// # Examples
@@ -437,6 +362,7 @@ impl App {
     /// App::new()
     ///     .insert_non_send_resource(MyCounter { counter: 0 });
     /// ```
+    #[cfg(feature = "non_send")]
     pub fn insert_non_send_resource<R: 'static>(&mut self, resource: R) -> &mut Self {
         self.world.insert_non_send_resource(resource);
         self
@@ -482,6 +408,7 @@ impl App {
     /// The [`Resource`] must implement the [`FromWorld`] trait.
     /// If the [`Default`] trait is implemented, the [`FromWorld`] trait will use
     /// the [`Default::default`] method to initialize the [`Resource`].
+    #[cfg(feature = "non_send")]
     pub fn init_non_send_resource<R: 'static + FromWorld>(&mut self) -> &mut Self {
         self.world.init_non_send_resource::<R>();
         self
@@ -583,7 +510,7 @@ impl App {
     /// Adds one or more [`Plugin`]s.
     ///
     /// One of Ens's core principles is modularity. All Ens features are implemented
-    /// as [`Plugin`]s. This includes internal features like the renderer.
+    /// as [`Plugin`]s.
     ///
     /// [`Plugin`]s can be grouped into a set by using a [`PluginGroup`].
     ///

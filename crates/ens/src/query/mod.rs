@@ -6,6 +6,7 @@ mod error;
 mod fetch;
 mod filter;
 mod iter;
+#[cfg(feature = "multi-threaded")]
 mod par_iter;
 mod state;
 mod world_query;
@@ -17,6 +18,7 @@ pub use error::*;
 pub use fetch::*;
 pub use filter::*;
 pub use iter::*;
+#[cfg(feature = "multi-threaded")]
 pub use par_iter::*;
 pub use state::*;
 pub use world_query::*;

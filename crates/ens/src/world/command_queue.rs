@@ -4,8 +4,6 @@ use std::{fmt::Debug, mem::MaybeUninit};
 
 use ens_ptr::{OwningPtr, Unaligned};
 
-use log::warn;
-
 use crate::world::{Command, World};
 
 struct CommandMeta {
@@ -230,7 +228,7 @@ impl CommandQueue {
 impl Drop for CommandQueue {
     fn drop(&mut self) {
         if !self.bytes.is_empty() {
-            warn!("CommandQueue has un-applied commands being dropped.");
+            panic!("CommandQueue has un-applied commands being dropped.");
         }
         self.apply_or_drop_queued(None);
     }

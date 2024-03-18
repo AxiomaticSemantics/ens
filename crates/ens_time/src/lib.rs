@@ -58,8 +58,7 @@ impl Plugin for TimePlugin {
 /// networking or similar, you may prefer to set the next [`Time`] value manually.
 #[derive(Resource, Default)]
 pub enum TimeUpdateStrategy {
-    /// [`Time`] will be automatically updated each frame using an [`Instant`] sent from the render world via a [`TimeSender`].
-    /// If nothing is sent, the system clock will be used instead.
+    /// [`Time`] will be automatically updated each loop using an [`Instant`] taken from the system clock.
     #[default]
     Automatic,
     /// [`Time`] will be updated to the specified [`Instant`] value each frame.

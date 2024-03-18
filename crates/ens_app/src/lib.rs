@@ -7,6 +7,7 @@ mod plugin;
 mod plugin_group;
 mod schedule_runner;
 
+#[cfg(feature = "multi-treaded")]
 mod task_pool_plugin;
 
 pub use app::*;
@@ -14,6 +15,8 @@ pub use main_schedule::*;
 pub use plugin::*;
 pub use plugin_group::*;
 pub use schedule_runner::*;
+
+#[cfg(feature = "multi-treaded")]
 pub use task_pool_plugin::*;
 
 #[cfg(feature = "derive")]
@@ -25,9 +28,11 @@ pub mod prelude {
     pub use crate::{
         app::App,
         main_schedule::{Main, PostUpdate, PreUpdate, Update},
-        task_pool_plugin::TaskPoolPlugin,
         Plugin, PluginGroup,
     };
+
+    #[cfg(feature = "multi-threaded")]
+    pub use create::task_pool_plugin::TaskPoolPlugin;
 
     #[cfg(feature = "startup")]
     pub use crate::main_schedule::{PostStartup, PreStartup, Startup};

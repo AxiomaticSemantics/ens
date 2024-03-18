@@ -160,13 +160,13 @@ fn main() {
 
         // Macro Compile Fail Tests
         // Run tests (they do not get executed with the workspace tests)
-        // - See crates/bevy_macros_compile_fail_tests/README.md
+        // - See crates/ens_macros_compile_fail_tests/README.md
         let args_clone = args.clone();
 
         test_suite.entry(Check::COMPILE_FAIL).and_modify(|tests| tests.push( CITest {
             command: cmd!(sh, "cargo test {args_clone...}"),
             failure_message: "Compiler errors of the macros compile fail tests seem to be different than expected! Check locally and compare rust versions.",
-            subdir: Some("crates/bevy_macros_compile_fail_tests"),
+            subdir: Some("crates/ens_macros_compile_fail_tests"),
             env_vars: vec![],
         }));
     }
@@ -267,7 +267,7 @@ fn main() {
     }
 
     if checks.contains(Check::COMPILE_CHECK) {
-        // Build bevy and check that it compiles
+        // Build ens and check that it compiles
         let mut args = vec!["--workspace"];
         if flags.contains(Flag::KEEP_GOING) {
             args.push("--keep-going");

@@ -10,6 +10,7 @@ keywords = ["ecs"]
 categories = ["data-structures"]
 
 [features]
+non_send = []
 entity_hash = []
 derive_macros = ["ens_macros"]
 serialize = ["serde"]

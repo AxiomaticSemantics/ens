@@ -41,8 +41,6 @@ mod hash;
 #[cfg(feature = "entity_hash")]
 pub use hash::*;
 
-use log::warn;
-
 use crate::{
     archetype::{ArchetypeId, ArchetypeRow},
     storage::{SparseSetIndex, TableId, TableRow},
@@ -635,7 +633,8 @@ impl Entities {
         meta.generation = inc_generation_by(meta.generation, 1);
 
         if meta.generation == NonZeroU32::MIN {
-            warn!(
+            #[cfg(feature = "log")]
+            log::warn!(
                 "Entity({}) generation wrapped on Entities::free, aliasing may occur",
                 entity.index
             );

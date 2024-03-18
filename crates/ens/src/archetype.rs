@@ -575,18 +575,21 @@ impl Archetype {
     }
 
     /// Returns true if any of the components in this archetype have `on_add` hooks
+    #[cfg(feature = "component_hooks")]
     #[inline]
     pub(crate) fn has_on_add(&self) -> bool {
         self.flags().contains(ArchetypeFlags::ON_ADD_HOOK)
     }
 
     /// Returns true if any of the components in this archetype have `on_insert` hooks
+    #[cfg(feature = "component_hooks")]
     #[inline]
     pub(crate) fn has_on_insert(&self) -> bool {
         self.flags().contains(ArchetypeFlags::ON_INSERT_HOOK)
     }
 
     /// Returns true if any of the components in this archetype have `on_remove` hooks
+    #[cfg(feature = "component_hooks")]
     #[inline]
     pub(crate) fn has_on_remove(&self) -> bool {
         self.flags().contains(ArchetypeFlags::ON_REMOVE_HOOK)
@@ -649,6 +652,7 @@ impl SparseSetIndex for ArchetypeComponentId {
         self.0
     }
 
+    #[inline]
     fn get_sparse_set_index(value: usize) -> Self {
         Self(value)
     }

@@ -1,5 +1,4 @@
 use core::fmt::Debug;
-use log::warn;
 
 #[cfg(feature = "change_detection")]
 use crate::component::Tick;
@@ -161,7 +160,8 @@ pub type BoxedSystem<In = (), Out = ()> = Box<dyn System<In = In, Out = Out>>;
 pub(crate) fn check_system_change_tick(last_run: &mut Tick, this_run: Tick, system_name: &str) {
     if last_run.check_tick(this_run) {
         let age = this_run.relative_to(*last_run).get();
-        warn!(
+        #[cfg(feature = "log")]
+        log::warn!(
             "System '{system_name}' has not run for {age} ticks. \
             Changes older than {} ticks will not be detected.",
             Tick::MAX.get() - 1,

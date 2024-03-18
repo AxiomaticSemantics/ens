@@ -6,7 +6,6 @@ mod entity_ref;
 pub mod error;
 mod spawn_batch;
 pub mod unsafe_world_cell;
-mod world_cell;
 
 #[cfg(feature = "change_detection")]
 pub use crate::change_detection::CHECK_TICK_THRESHOLD;
@@ -19,7 +18,6 @@ pub use entity_ref::{
     OccupiedEntry, VacantEntry,
 };
 pub use spawn_batch::*;
-pub use world_cell::*;
 
 use crate::{
     access::MutUntyped,
@@ -128,7 +126,7 @@ pub struct World {
     #[cfg(feature = "events")]
     pub(crate) removed_components: RemovedComponentEvents,
     /// Access cache used by [`WorldCell`]. Is only accessed in the `Drop` impl of `WorldCell`.
-    pub(crate) archetype_component_access: ArchetypeComponentAccess,
+    //pub(crate) archetype_component_access: ArchetypeComponentAccess,
     pub(crate) command_queue: CommandQueue,
     #[cfg(feature = "change_detection")]
     pub(crate) change_tick: AtomicU32,
@@ -149,7 +147,7 @@ impl Default for World {
             bundles: Default::default(),
             #[cfg(feature = "events")]
             removed_components: Default::default(),
-            archetype_component_access: Default::default(),
+            //archetype_component_access: Default::default(),
             command_queue: CommandQueue::default(),
             // Default value is `1`, and `last_change_tick`s default to `0`, such that changes
             // are detected on first system runs and for direct world queries.
@@ -243,6 +241,7 @@ impl World {
 
     /// Retrieves a [`WorldCell`], which safely enables multiple mutable World accesses at the same
     /// time, provided those accesses do not conflict with each other.
+    #[cfg(feature = "no")]
     #[inline(always)]
     pub fn cell(&mut self) -> WorldCell<'_> {
         WorldCell::new(self)
@@ -1206,6 +1205,7 @@ impl World {
     /// # Panics
     ///
     /// Panics if called from a thread other than the main thread.
+    #[cfg(feature = "non_send")]
     #[inline]
     pub fn init_non_send_resource<R: 'static + FromWorld>(&mut self) -> ComponentId {
         let component_id = self.components.init_non_send::<R>();
@@ -1235,6 +1235,7 @@ impl World {
     /// # Panics
     /// If a value is already present, this function will panic if called
     /// from a different thread than where the original value was inserted from.
+    #[cfg(feature = "non_send")]
     #[inline]
     pub fn insert_non_send_resource<R: 'static>(&mut self, value: R) {
         let component_id = self.components.init_non_send::<R>();
@@ -1277,6 +1278,7 @@ impl World {
     /// # Panics
     /// If a value is present, this function will panic if called from a different
     /// thread than where the value was inserted from.
+    #[cfg(feature = "non_send")]
     #[inline]
     pub fn remove_non_send_resource<R: 'static>(&mut self) -> Option<R> {
         let component_id = self.components.get_resource_id(TypeId::of::<R>())?;
@@ -1314,6 +1316,7 @@ impl World {
     }
 
     /// Returns `true` if a resource of type `R` exists. Otherwise returns `false`.
+    #[cfg(feature = "non_send")]
     #[inline]
     pub fn contains_non_send<R: 'static>(&self) -> bool {
         self.components
@@ -1567,6 +1570,7 @@ impl World {
     /// Use [`get_non_send_resource`](World::get_non_send_resource) instead if you want to handle this case.
     ///
     /// This function will panic if it isn't called from the same thread that the resource was inserted from.
+    #[cfg(feature = "non_send")]
     #[inline]
     #[track_caller]
     pub fn non_send_resource<R: 'static>(&self) -> &R {
@@ -1587,6 +1591,7 @@ impl World {
     /// Use [`get_non_send_resource_mut`](World::get_non_send_resource_mut) instead if you want to handle this case.
     ///
     /// This function will panic if it isn't called from the same thread that the resource was inserted from.
+    #[cfg(feature = "non_send")]
     #[inline]
     #[track_caller]
     pub fn non_send_resource_mut<R: 'static>(&mut self) -> Mut<'_, R> {
@@ -1604,6 +1609,7 @@ impl World {
     ///
     /// # Panics
     /// This function will panic if it isn't called from the same thread that the resource was inserted from.
+    #[cfg(feature = "non_send")]
     #[inline]
     pub fn get_non_send_resource<R: 'static>(&self) -> Option<&R> {
         // SAFETY:
@@ -1617,6 +1623,7 @@ impl World {
     ///
     /// # Panics
     /// This function will panic if it isn't called from the same thread that the resource was inserted from.
+    #[cfg(feature = "non_send")]
     #[inline]
     pub fn get_non_send_resource_mut<R: 'static>(&mut self) -> Option<Mut<'_, R>> {
         // SAFETY:
@@ -1636,6 +1643,7 @@ impl World {
     }
 
     // Shorthand helper function for getting the [`ArchetypeComponentId`] for a resource.
+    #[cfg(feature = "non_send")]
     #[inline]
     pub(crate) fn get_non_send_archetype_component_id(
         &self,
@@ -1934,10 +1942,11 @@ impl World {
         let mut value = unsafe { ptr.read::<R>() };
         let value_mut = Mut { value: &mut value };
         let result = f(self, value_mut);
-        assert!(!self.contains_resource::<R>(),
-            "Resource `{}` was inserted during a call to World::resource_scope.\n\
-            This is not allowed as the original resource is reinserted to the world after the closure is invoked.",
-            std::any::type_name::<R>());
+        assert!(
+            !self.contains_resource::<R>(),
+            "Resource `{}` was inserted during a call to World::resource_scope.",
+            std::any::type_name::<R>()
+        );
 
         OwningPtr::make(value, |ptr| {
             // SAFETY: pointer is of type R
@@ -2014,11 +2023,7 @@ impl World {
             let resource = self.initialize_resource_internal(component_id);
             // SAFETY: `value` is valid for `component_id`, ensured by caller
             unsafe {
-                resource.insert(
-                    value,
-                    #[cfg(feature = "change_detection")]
-                    change_tick,
-                );
+                resource.insert(value, change_tick);
             }
         }
 
@@ -2044,6 +2049,7 @@ impl World {
     ///
     /// # Safety
     /// The value referenced by `value` must be valid for the given [`ComponentId`] of this world.
+    #[cfg(feature = "non_send")]
     #[inline]
     pub unsafe fn insert_non_send_by_id(
         &mut self,
@@ -2087,6 +2093,7 @@ impl World {
 
     /// # Panics
     /// panics if `component_id` is not registered in this world
+    #[cfg(feature = "non_send")]
     #[inline]
     pub(crate) fn initialize_non_send_internal(
         &mut self,
@@ -2525,7 +2532,7 @@ impl World {
 
         let old = self.resource_mut::<Schedules>().insert(schedule);
         if old.is_some() {
-            warn!("Schedule `{label:?}` was inserted during a call to `World::schedule_scope`: its value has been overwritten");
+            panic!("Schedule `{label:?}` was inserted during a call to `World::schedule_scope`: its value has been overwritten");
         }
 
         Ok(value)

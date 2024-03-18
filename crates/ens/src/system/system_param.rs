@@ -1,5 +1,5 @@
 use crate::{
-    access::{NonSendMut, Res, ResMut},
+    access::{Res, ResMut},
     archetype::{Archetype, Archetypes},
     bundle::Bundles,
     component::{ComponentId, Components},
@@ -11,6 +11,9 @@ use crate::{
     system::{Query, SystemMeta},
     world::{unsafe_world_cell::UnsafeWorldCell, FromWorld, World},
 };
+
+#[cfg(feature = "non_send")]
+use crate::access::NonSendMut;
 
 #[cfg(feature = "change_detection")]
 use crate::change_detection::{Ticks, TicksMut};
@@ -1014,6 +1017,7 @@ unsafe impl<T: SystemBuffer> SystemParam for Deferred<'_, T> {
 /// Panics when used as a `SystemParameter` if the resource does not exist.
 ///
 /// Use `Option<NonSend<T>>` instead if the resource might not always exist.
+#[cfg(feature = "non_send")]
 pub struct NonSend<'w, T: 'static> {
     pub(crate) value: &'w T,
     #[cfg(feature = "change_detection")]
@@ -1025,8 +1029,10 @@ pub struct NonSend<'w, T: 'static> {
 }
 
 // SAFETY: Only reads a single World non-send resource
+#[cfg(feature = "non_send")]
 unsafe impl<'w, T> ReadOnlySystemParam for NonSend<'w, T> {}
 
+#[cfg(feature = "non_send")]
 impl<'w, T> Debug for NonSend<'w, T>
 where
     T: Debug,
@@ -1036,7 +1042,7 @@ where
     }
 }
 
-#[cfg(feature = "change_detection")]
+#[cfg(all(feature = "non_send", feature = "change_detection"))]
 impl<'w, T: 'static> NonSend<'w, T> {
     /// Returns `true` if the resource was added after the system last ran.
     pub fn is_added(&self) -> bool {
@@ -1049,6 +1055,7 @@ impl<'w, T: 'static> NonSend<'w, T> {
     }
 }
 
+#[cfg(feature = "non_send")]
 impl<'w, T> Deref for NonSend<'w, T> {
     type Target = T;
 
@@ -1056,6 +1063,8 @@ impl<'w, T> Deref for NonSend<'w, T> {
         self.value
     }
 }
+
+#[cfg(feature = "non_send")]
 impl<'a, T> From<NonSendMut<'a, T>> for NonSend<'a, T> {
     fn from(nsm: NonSendMut<'a, T>) -> Self {
         Self {
@@ -1075,6 +1084,7 @@ impl<'a, T> From<NonSendMut<'a, T>> for NonSend<'a, T> {
 
 // SAFETY: NonSendComponentId and ArchetypeComponentId access is applied to SystemMeta. If this
 // NonSend conflicts with any prior access, a panic will occur.
+#[cfg(feature = "non_send")]
 unsafe impl<'a, T: 'static> SystemParam for NonSend<'a, T> {
     type State = ComponentId;
     type Item<'w, 's> = NonSend<'w, T>;
@@ -1151,9 +1161,11 @@ unsafe impl<'a, T: 'static> SystemParam for NonSend<'a, T> {
 }
 
 // SAFETY: Only reads a single World non-send resource
+#[cfg(feature = "non_send")]
 unsafe impl<T: 'static> ReadOnlySystemParam for Option<NonSend<'_, T>> {}
 
 // SAFETY: this impl defers to `NonSend`, which initializes and validates the correct world access.
+#[cfg(feature = "non_send")]
 unsafe impl<T: 'static> SystemParam for Option<NonSend<'_, T>> {
     type State = ComponentId;
     type Item<'w, 's> = Option<NonSend<'w, T>>;
@@ -1193,6 +1205,7 @@ unsafe impl<T: 'static> SystemParam for Option<NonSend<'_, T>> {
     }
 }
 
+#[cfg(feature = "non_send")]
 // SAFETY: NonSendMut ComponentId and ArchetypeComponentId access is applied to SystemMeta. If this
 // NonSendMut conflicts with any prior access, a panic will occur.
 unsafe impl<'a, T: 'static> SystemParam for NonSendMut<'a, T> {
@@ -1273,6 +1286,7 @@ unsafe impl<'a, T: 'static> SystemParam for NonSendMut<'a, T> {
 }
 
 // SAFETY: this impl defers to `NonSendMut`, which initializes and validates the correct world access.
+#[cfg(feature = "non_send")]
 unsafe impl<'a, T: 'static> SystemParam for Option<NonSendMut<'a, T>> {
     type State = ComponentId;
     type Item<'w, 's> = Option<NonSendMut<'w, T>>;

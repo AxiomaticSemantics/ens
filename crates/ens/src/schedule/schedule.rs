@@ -5,8 +5,6 @@ use std::{
 
 use ens_utils::{HashMap, HashSet};
 
-use log::{error, info, warn};
-
 use fixedbitset::FixedBitSet;
 use petgraph::{algo::TarjanScc, prelude::*};
 use thiserror::Error;
@@ -134,7 +132,8 @@ impl Schedules {
             writeln!(message, "{}", components.get_name(*id).unwrap()).unwrap();
         }
 
-        info!("{}", message);
+        #[cfg(feature = "log")]
+        log::info!("{}", message);
     }
 }
 
@@ -371,12 +370,14 @@ impl Schedule {
             }
         }
 
+        #[cfg(feature = "run_conditions")]
         for conditions in &mut self.executable.system_conditions {
             for system in conditions {
                 system.check_change_tick(change_tick);
             }
         }
 
+        #[cfg(feature = "run_conditions")]
         for conditions in &mut self.executable.set_conditions {
             for system in conditions {
                 system.check_change_tick(change_tick);
@@ -1387,8 +1388,14 @@ impl ScheduleGraph {
             .unzip();
 
         #[cfg(not(feature = "run_conditions"))]
-        let (_, hg_set_ids): (Vec<_>, Vec<_>) =
-            self.hierarchy.topsort.iter().cloned().enumerate().unzip();
+        let (_, hg_set_ids): (Vec<_>, Vec<_>) = self
+            .hierarchy
+            .topsort
+            .iter()
+            .cloned()
+            .enumerate()
+            .filter(|&(_i, id)| id.is_set())
+            .unzip();
 
         let sys_count = self.systems.len();
         let hg_node_count = self.hierarchy.graph.node_count();
@@ -1470,7 +1477,7 @@ impl ScheduleGraph {
         }
     }
 
-    #[cfg(feature = "change_detection")]
+    #[cfg(feature = "run_conditions")]
     fn update_schedule(
         &mut self,
         schedule: &mut SystemSchedule,
@@ -1663,7 +1670,8 @@ impl ScheduleGraph {
         match self.settings.hierarchy_detection {
             LogLevel::Ignore => unreachable!(),
             LogLevel::Warn => {
-                error!(
+                #[cfg(feature = "log")]
+                log::error!(
                     "Schedule {schedule_label:?} has redundant edges:\n {}",
                     message
                 );
@@ -1869,7 +1877,8 @@ impl ScheduleGraph {
         match self.settings.ambiguity_detection {
             LogLevel::Ignore => Ok(()),
             LogLevel::Warn => {
-                warn!("Schedule {schedule_label:?} has ambiguities.\n{}", message);
+                #[cfg(feature = "log")]
+                log::warn!("Schedule {schedule_label:?} has ambiguities.\n{}", message);
                 Ok(())
             }
             LogLevel::Error => Err(ScheduleBuildError::Ambiguity(message)),

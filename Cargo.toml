@@ -20,7 +20,6 @@ exclude = [
 members = [
   "crates/*",
   "tools/ci",
-  "tools/build-templated-pages",
 ]
 
 #[package]

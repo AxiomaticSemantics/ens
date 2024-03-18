@@ -288,21 +288,27 @@ impl<'w, T: Resource> From<ResMut<'w, T>> for Mut<'w, T> {
 /// Panics when used as a `SystemParameter` if the resource does not exist.
 ///
 /// Use `Option<NonSendMut<T>>` instead if the resource might not always exist.
+#[cfg(feature = "non_send")]
 pub struct NonSendMut<'w, T: ?Sized + 'static> {
     pub(crate) value: &'w mut T,
     #[cfg(feature = "change_detection")]
     pub(crate) ticks: TicksMut<'w>,
 }
 
-#[cfg(feature = "change_detection")]
+#[cfg(all(feature = "non_send", feature = "change_detection"))]
 change_detection_impl!(NonSendMut<'w, T>, T,);
-#[cfg(feature = "change_detection")]
+#[cfg(all(feature = "non_send", feature = "change_detection"))]
 change_detection_mut_impl!(NonSendMut<'w, T>, T,);
+#[cfg(feature = "non_send")]
 impl_methods!(NonSendMut<'w, T>, T,);
+#[cfg(feature = "non_send")]
 impl_deref!(NonSendMut<'w, T>, T,);
+#[cfg(feature = "non_send")]
 impl_deref_mut!(NonSendMut<'w, T>, T,);
+#[cfg(feature = "non_send")]
 impl_debug!(NonSendMut<'w, T>,);
 
+#[cfg(feature = "non_send")]
 impl<'w, T: 'static> From<NonSendMut<'w, T>> for Mut<'w, T> {
     /// Convert this `NonSendMut` into a `Mut`. This allows keeping the change-detection feature of `Mut`
     /// while losing the specificity of `NonSendMut`.

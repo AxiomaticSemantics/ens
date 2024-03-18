@@ -12,7 +12,6 @@ use crate::{
 };
 use ens_macros::SystemParam;
 
-use log::{error, info};
 #[cfg(feature = "parallel_scope")]
 pub use parallel_scope::*;
 use std::marker::PhantomData;
@@ -937,6 +936,8 @@ impl EntityCommands<'_> {
     /// # Panics
     ///
     /// The command will panic when applied if the associated entity does not exist.
+
+    #[cfg(feature = "log")]
     pub fn log_components(&mut self) {
         self.add(log_components);
     }
@@ -998,7 +999,8 @@ where
 {
     move |world: &mut World| {
         if let Err(invalid_entities) = world.insert_or_spawn_batch(bundles) {
-            error!(
+            #[cfg(feature = "log")]
+            log::error!(
                 "Failed to 'insert or spawn' bundle of type {} into the following invalid entities: {:?}",
                 std::any::type_name::<B>(),
                 invalid_entities
@@ -1075,13 +1077,14 @@ fn insert_resource<R: Resource>(resource: R) -> impl Command {
 }
 
 /// [`EntityCommand`] to log the components of a given entity. See [`EntityCommands::log_components`].
+#[cfg(feature = "log")]
 fn log_components(entity: Entity, world: &mut World) {
     let debug_infos: Vec<_> = world
         .inspect_entity(entity)
         .into_iter()
         .map(|component_info| component_info.name())
         .collect();
-    info!("Entity {:?}: {:?}", entity, debug_infos);
+    log::info!("Entity {:?}: {:?}", entity, debug_infos);
 }
 
 #[cfg(test)]
